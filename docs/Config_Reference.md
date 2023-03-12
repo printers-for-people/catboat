@@ -3539,6 +3539,47 @@ run_current:
 #   sensorless homing.
 ```
 
+### [tmctrigorilla]
+
+Configure both TMC2208 and TMC2209 stepper motors on a Trigorilla V1.0.4 board.
+This is only used for Anycubic Kobra, Anycubic Kobra Max and Anycubic Kobra Plus.
+The boards have a broken TMC configuration and require this as a workaround.
+
+While this configuration specifies a stepper (X on the Kobra series) its values
+also apply to the extruder. Both the stepper and extruder must have the same
+microsteps value.
+
+```
+[tmctrigorilla stepper_x]
+uart_pin:
+#interpolate: True
+run_current:
+#hold_current:
+#stealthchop_threshold: 0
+#   See the "tmc2208" section for the definition of these parameters.
+#driver_TPOWERDOWN: 20
+#driver_PWM_AUTOGRAD: True
+#driver_PWM_AUTOSCALE: True
+#driver_PWM_LIM: 12
+#driver_PWM_REG: 8
+#driver_PWM_FREQ: 1
+#driver_PWM_GRAD: 14
+#driver_PWM_OFS: 36
+#driver_SGTHRS: 0
+#   Set the given register during the configuration of both the TMC
+#   chip. This may be used to set custom motor parameters. The
+#   defaults for each parameter are next to the parameter name in the
+#   above list.
+#diag_pin:
+#   The micro-controller pin attached to the DIAG line of the TMC2209
+#   chip. The pin is normally prefaced with "^" to enable a pullup.
+#   Setting this creates a "tmctrigorilla_stepper_x:virtual_endstop" virtual
+#   pin which may be used as the stepper's endstop_pin. Doing this
+#   enables "sensorless homing". (Be sure to also set driver_SGTHRS to
+#   an appropriate sensitivity value.) The default is to not enable
+#   sensorless homing.
+```
+
 ## Run-time stepper motor current configuration
 
 ### [ad5206]
