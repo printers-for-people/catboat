@@ -53,8 +53,8 @@ Furthermore, even in this case, the documentation is spotty at best, and
 misleading at worst. This is 100% a problem that _could_ be solved, and Catboat
 aims to do so. In particular, we aim to provide two things:
 
-* A very general, easy-to-run configuration that works on _any_ Linux-capable
-  SBC; and
+* A general, easy-to-run configuration process, which works on most
+  Linux-capable devices; and
 * A collection of _multiple_ 'blessed' devices, which we have tested and ensure
   work, and provide additional 'plug-and-play' levels of support for.
 
