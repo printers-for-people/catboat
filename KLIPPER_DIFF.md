@@ -10,7 +10,7 @@ in ways implementers and tinkerers with Catboat itself would be interested in.
 
 ### Support for Anycubic Trigorilla boards
 
-Due to a manufacturing flaw, Trigorilla boards (used in the Anycubiv Kobra,
+Due to a manufacturing flaw, Trigorilla boards (used in the Anycubic Kobra,
 Kobra Max and Kobra Plus) cannot run Klipper without physical modifications. We
 introduce a `tmctrigorilla` configuration section, allowing configuring stepper
 drivers for these boards. This allows us to support any printer controlled by
