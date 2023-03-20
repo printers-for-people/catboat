@@ -256,7 +256,6 @@ class TMCTRIGORILLA:
         cmdhelper = TMCCommandHelperTrigorilla(config,
                         self.mcu_tmc, current_helper)
         # Setup basic register values
-        self.fields.set_field("pdn_disable", True)
         self.fields.set_field("mstep_reg_select", True)
         self.fields.set_field("multistep_filt", True)
         tmc.TMCStealthchopHelper(config, self.mcu_tmc, TMC_FREQUENCY)
