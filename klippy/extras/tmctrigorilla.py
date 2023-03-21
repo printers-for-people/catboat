@@ -126,6 +126,8 @@ class TMCCommandHelperTrigorilla:
         self.toff = None
         self.mcu_phase_offset = None
         self.stepper = None
+        self.printer.register_event_handler("klippy:mcu_identify",
+                                            self._handle_mcu_identify)
         self.printer.register_event_handler("klippy:connect",
                                             self._handle_connect)
         # Set microstep config options
@@ -145,8 +147,6 @@ class TMCCommandHelperTrigorilla:
         # Send registers
         for reg_name, val in self.fields.registers.items():
             self.mcu_tmc.set_register(reg_name, val, print_time)
-    def _handle_connect(self):
-        self._init_registers()
     cmd_INIT_TMC_help = "Initialize TMC stepper driver registers"
     def cmd_INIT_TMC(self, gcmd):
         logging.info("INIT_TMC %s", self.name)
@@ -158,7 +158,18 @@ class TMCCommandHelperTrigorilla:
         reg_name = self.fields.lookup_register(field_name, None)
         if reg_name is None:
             raise gcmd.error("Unknown field name '%s'" % (field_name,))
-        value = gcmd.get_int('VALUE')
+        value = gcmd.get_int('VALUE', None)
+        velocity = gcmd.get_float('VELOCITY', None, minval=0.)
+        tmc_frequency = self.mcu_tmc.get_tmc_frequency()
+        if tmc_frequency is None and velocity is not None:
+            raise gcmd.error("VELOCITY parameter not supported by this driver")
+        if (value is None) == (velocity is None):
+            raise gcmd.error("Specify either VALUE or VELOCITY")
+        if velocity is not None:
+            step_dist = self.stepper.get_step_dist()
+            mres = self.fields.get_field("mres")
+            value = tmc.TMCtstepHelper(step_dist, mres, tmc_frequency,
+                                   velocity)
         reg_val = self.fields.set_field(field_name, value)
         print_time = self.printer.lookup_object('toolhead').get_last_move_time()
         self.mcu_tmc.set_register(reg_name, reg_val, print_time)
@@ -184,10 +195,18 @@ class TMCCommandHelperTrigorilla:
         else:
             gcmd.respond_info("Run Current: %0.2fA Hold Current: %0.2fA"
                               % (prev_cur, prev_hold_cur))
+    def _handle_connect(self):
+        self._init_registers()
+    def _handle_mcu_identify(self):
+        # Lookup stepper object
+        force_move = self.printer.lookup_object("force_move")
+        self.stepper = force_move.lookup_stepper(self.stepper_name)
+        # Note pulse duration and step_both_edge optimizations available
+        self.stepper.setup_default_pulse_duration(.000000100, True)
 
 # Helper code for communicating via TMC uart
 class MCU_TMC_uart_trigorilla:
-    def __init__(self, config, name_to_reg, fields, max_addr=0):
+    def __init__(self, config, name_to_reg, fields, max_addr, tmc_frequency):
         self.printer = config.get_printer()
         self.name = config.get_name().split()[-1]
         self.name_to_reg = name_to_reg
@@ -196,6 +215,7 @@ class MCU_TMC_uart_trigorilla:
         self.instance_id, self.addr, self.mcu_uart = \
             tmc_uart.lookup_tmc_uart_bitbang(config, max_addr)
         self.mutex = self.mcu_uart.mutex
+        self.tmc_frequency = tmc_frequency
     def get_fields(self):
         return self.fields
     def _do_get_register(self, reg_name):
@@ -215,6 +235,8 @@ class MCU_TMC_uart_trigorilla:
             for retry in range(5):
                 self.mcu_uart.reg_write(self.instance_id, self.addr, reg, val,
                                         print_time)
+    def get_tmc_frequency(self):
+        return self.tmc_frequency
 
 
 ######################################################################
@@ -245,7 +267,7 @@ class TMCTRIGORILLA:
         # Setup mcu communication
         self.fields = tmc.FieldHelper(Fields)
         self.mcu_tmc = MCU_TMC_uart_trigorilla(config,
-            Registers, self.fields, 3)
+            Registers, self.fields, 3, TMC_FREQUENCY)
         # Setup fields for UART
         self.fields.set_field("pdn_disable", True)
         self.fields.set_field("senddelay", 2) # Avoid tx errors on shared uart
@@ -256,7 +278,6 @@ class TMCTRIGORILLA:
         cmdhelper = TMCCommandHelperTrigorilla(config,
                         self.mcu_tmc, current_helper)
         # Setup basic register values
-        self.fields.set_field("pdn_disable", True)
         self.fields.set_field("mstep_reg_select", True)
         self.fields.set_field("multistep_filt", True)
         tmc.TMCStealthchopHelper(config, self.mcu_tmc, TMC_FREQUENCY)
