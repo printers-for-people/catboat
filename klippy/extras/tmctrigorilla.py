@@ -201,8 +201,6 @@ class TMCCommandHelperTrigorilla:
         # Lookup stepper object
         force_move = self.printer.lookup_object("force_move")
         self.stepper = force_move.lookup_stepper(self.stepper_name)
-        # Note pulse duration and step_both_edge optimizations available
-        self.stepper.setup_default_pulse_duration(.000000100, True)
 
 # Helper code for communicating via TMC uart
 class MCU_TMC_uart_trigorilla:
