@@ -16,8 +16,10 @@ introduce a `tmctrigorilla` configuration section, allowing configuring stepper
 drivers for these boards. This allows us to support any printer controlled by
 such a board.
 
-As part of this, we added a config file for the Anycubic Kobra. While in theory,
-we could also support the Kobra Max and Kobra Plus, someone would have to
+As part of this, we added a config file for the Anycubic Kobra.
+We have also ported the mainline Klipper configs for the Kobra Plus to use the
+tmctrigorilla configuration.
+While in theory we could also support the Kobra Max, someone would have to
 contribute a tested config.
 
 ## Implementation changes
