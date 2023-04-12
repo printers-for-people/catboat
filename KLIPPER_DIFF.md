@@ -22,6 +22,9 @@ tmctrigorilla configuration.
 While in theory we could also support the Kobra Max, someone would have to
 contribute a tested config.
 
+As a small improvement we also support UART over the display LCD connector,
+freeing up a USB connector on your Linux board.
+
 ## Implementation changes
 
 ### No Python 2

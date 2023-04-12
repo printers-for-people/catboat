@@ -230,7 +230,7 @@ class MCU_TMC_uart_trigorilla:
         with self.mutex:
             # We can't check the IFCNT register so just write the value multiple
             # times in hopes this reduces errors
-            for retry in range(5):
+            for retry in range(2):
                 self.mcu_uart.reg_write(self.instance_id, self.addr, reg, val,
                                         print_time)
     def get_tmc_frequency(self):
