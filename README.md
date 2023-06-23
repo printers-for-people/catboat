@@ -81,7 +81,7 @@ not consider central enough to their goals.
 
 ## How do I use this?
 
-Look at the wiki for more information.
+For a jump start, try a [KIAUH Install](https://github.com/printers-for-people/catboat/wiki/KIAUH-Install). Look at the [Catboat wiki](https://github.com/printers-for-people/catboat/wiki) for more information.
 
 ## How is this different from Klipper?
 
@@ -91,6 +91,8 @@ you have a working Klipper config, you can use it with Catboat and still expect
 it to work. If this doesn't happen, it's a bug: please report it!
 
 ## I want to help - what should I do?
+
+Test the code on your printer and provide feedback to [Catboat issues](https://github.com/printers-for-people/catboat/issues), good or bad.
 
 ## Licensing and other such things
 
