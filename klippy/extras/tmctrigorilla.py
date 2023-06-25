@@ -277,10 +277,10 @@ class TMCTRIGORILLA:
                         self.mcu_tmc, current_helper)
         # Setup basic register values
         self.fields.set_field("mstep_reg_select", True)
-        self.fields.set_field("multistep_filt", True)
         tmc.TMCStealthchopHelper(config, self.mcu_tmc, TMC_FREQUENCY)
         # Allow other registers to be set from the config
         set_config_field = self.fields.set_config_field
+        set_config_field(config, "multistep_filt", True)
         set_config_field(config, "toff", 3)
         set_config_field(config, "hstrt", 5)
         set_config_field(config, "hend", 0)
