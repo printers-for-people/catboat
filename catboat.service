@@ -17,4 +17,4 @@ WantedBy=multi-user.target
 Type=simple
 User=catboat
 RemainAfterExit=yes
-ExecStart=/home/catboat/bin/python /home/catboat/catboat/klippy/klippy.py /home/catboat/printer.cfg
+ExecStart=/home/catboat/catboat-env/bin/python /home/catboat/catboat/klippy/klippy.py /home/catboat/printer.cfg
