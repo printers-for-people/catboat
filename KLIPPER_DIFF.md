@@ -22,6 +22,12 @@ tmctrigorilla configuration.
 While in theory we could also support the Kobra Max, someone would have to
 contribute a tested config.
 
+### Arch install
+
+The old Arch installation script has been removed. Instead, there are new
+installation instructions [on the wiki][arch-install]. While these are aimed
+primarily at Arch Linux ARM, they should work for baseline Arch as well.
+
 ## Implementation changes
 
 ### No Python 2
@@ -36,3 +42,5 @@ with `newlib-4.3.0`. As this is the default version shipping on at least one
 distro, this is an issue that will only get worse with time. We fixed this by
 adding an exception index table, which allows us to compile normally, at a small
 size penalty.
+
+[arch-install]: https://github.com/printers-for-people/catboat/wiki/Arch-Linux-ARM-install
