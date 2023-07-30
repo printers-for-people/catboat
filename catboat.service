@@ -1,0 +1,20 @@
+# Systemd service file for Catboat
+# This assumes:
+#
+# * A 'catboat' user exists for running things
+# * The Catboat source is cloned into '/home/catboat/catboat'
+# * The printer configuration is at '/home/catboat/printer.cfg'
+#
+# If any of these don't hold for your setup, modify appropriately
+[Unit]
+Description=Starts Catboat on startup
+After=network.target
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=simple
+User=catboat
+RemainAfterExit=yes
+ExecStart=/home/catboat/catboat-env/bin/python /home/catboat/catboat/klippy/klippy.py /home/catboat/printer.cfg
