@@ -22,11 +22,17 @@ tmctrigorilla configuration.
 While in theory we could also support the Kobra Max, someone would have to
 contribute a tested config.
 
-### Arch installation
+### Arch install
 
-The Arch installation script has been removed altogether. Instead, we have
-instructions for [Arch Linux ARM][alarm] on the [wiki][arch-install]. They 
-should work for baseline Arch as well.
+The old Arch installation script has been removed. Instead, there are new
+installation instructions [on the wiki][arch-install]. While these are aimed
+primarily at Arch Linux ARM, they should work for baseline Arch as well.
+
+### Systemd unit file
+
+A new unit file is provided in `catboat.service`. In particular, the file
+follows proper practices, including logging to the systemd journal instead of a
+file.
 
 ## Implementation changes
 
@@ -43,5 +49,4 @@ distro, this is an issue that will only get worse with time. We fixed this by
 adding an exception index table, which allows us to compile normally, at a small
 size penalty.
 
-[alarm]: https://archlinuxarm.org/
 [arch-install]: https://github.com/printers-for-people/catboat/wiki/Arch-Linux-ARM-install
