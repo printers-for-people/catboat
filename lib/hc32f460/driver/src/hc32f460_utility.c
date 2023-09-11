@@ -21,6 +21,32 @@
  ******************************************************************************/
 #include "hc32f460_utility.h"
 
+/**
+ *******************************************************************************
+ ** \brief Delay function, delay 1ms approximately
+ **
+ ** \param [in]  u32Cnt                 ms
+ **
+ ** \retval none
+ **
+ ******************************************************************************/
+void Ddl_Delay1ms(uint32_t u32Cnt)
+{
+    volatile uint32_t i;
+    uint32_t u32Cyc;
+
+    u32Cyc = SystemCoreClock;
+    u32Cyc = u32Cyc / 10000ul;
+    while (u32Cnt-- > 0ul)
+    {
+        i = u32Cyc;
+        while (i-- > 0ul)
+        {
+            ;
+        }
+    }
+}
+
 #if defined(DDL_UTILITY_ENABLE)
 asdf
 /**
@@ -315,32 +341,6 @@ en_result_t UART_PrintfInit(M4_USART_TypeDef *UARTx,
     return enRet;
 }
 #endif /* DDL_PRINT_ENABLE */
-
-/**
- *******************************************************************************
- ** \brief Delay function, delay 1ms approximately
- **
- ** \param [in]  u32Cnt                 ms
- **
- ** \retval none
- **
- ******************************************************************************/
-void Ddl_Delay1ms(uint32_t u32Cnt)
-{
-    volatile uint32_t i;
-    uint32_t u32Cyc;
-
-    u32Cyc = SystemCoreClock;
-    u32Cyc = u32Cyc / 10000ul;
-    while (u32Cnt-- > 0ul)
-    {
-        i = u32Cyc;
-        while (i-- > 0ul)
-        {
-            ;
-        }
-    }
-}
 
 /**
  *******************************************************************************

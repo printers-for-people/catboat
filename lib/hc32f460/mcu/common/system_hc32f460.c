@@ -20,6 +20,7 @@
  * Include files
  ******************************************************************************/
 #include "hc32_common.h"
+#include "autoconf.h" // CONFIG_CLOCK_FREQ
 
 /**
  *******************************************************************************
@@ -73,6 +74,15 @@ void SystemCoreClockUpdate(void)  // Update SystemCoreClock variable
     {
         HRC_VALUE = HRC_20MHz_VALUE;
     }
+
+    /* Set the clock according to configuration */
+    #if CONFIG_CLOCK_FREQ == 200000000
+        HRC_VALUE = HRC_20MHz_VALUE;
+    #elif CONFIG_CLOCK_FREQ == 168000000
+        HRC_VALUE = HRC_16MHz_VALUE;
+    #else
+        #error Unknown clock frequency!
+    #endif
 
     tmp = M4_SYSREG->CMU_CKSWR_f.CKSW;
     switch (tmp)
