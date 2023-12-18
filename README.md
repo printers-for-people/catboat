@@ -85,7 +85,7 @@ For a jump start, try a [KIAUH Install](https://github.com/printers-for-people/c
 
 ## How is this different from Klipper?
 
-See the [description file](KLIPPER_DIFF). At the same time, Catboat maintains
+See the [description file](KLIPPER_DIFF.md). At the same time, Catboat maintains
 the principle of 'any valid Klipper config is also a valid Catboat config'; if
 you have a working Klipper config, you can use it with Catboat and still expect
 it to work. If this doesn't happen, it's a bug: please report it!
