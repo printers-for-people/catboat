@@ -145,7 +145,8 @@ class TMCCommandHelperTrigorilla:
                                    desc=self.cmd_SET_TMC_CURRENT_help)
     def _init_registers(self, print_time=None):
         # Send registers
-        for reg_name, val in self.fields.registers.items():
+        for reg_name in list(self.fields.registers.keys()):
+            val = self.fields.registers[reg_name] # Val may change during loop
             self.mcu_tmc.set_register(reg_name, val, print_time)
     cmd_INIT_TMC_help = "Initialize TMC stepper driver registers"
     def cmd_INIT_TMC(self, gcmd):
@@ -195,12 +196,16 @@ class TMCCommandHelperTrigorilla:
         else:
             gcmd.respond_info("Run Current: %0.2fA Hold Current: %0.2fA"
                               % (prev_cur, prev_hold_cur))
-    def _handle_connect(self):
-        self._init_registers()
     def _handle_mcu_identify(self):
         # Lookup stepper object
         force_move = self.printer.lookup_object("force_move")
         self.stepper = force_move.lookup_stepper(self.stepper_name)
+    def _handle_connect(self):
+        # Send init
+        try:
+            self._init_registers()
+        except self.printer.command_error as e:
+            logging.info("TMC %s failed to init: %s", self.name, str(e))
 
 # Helper code for communicating via TMC uart
 class MCU_TMC_uart_trigorilla:
@@ -218,8 +223,7 @@ class MCU_TMC_uart_trigorilla:
         return self.fields
     def _do_get_register(self, reg_name):
         raise self.printer.command_error(
-            "f Unable to read tmc uart '%s' register %s"
-            % (self.name, reg_name))
+            "Unable to read tmc uart '%s' register %s" % (self.name, reg_name))
     def get_register(self, reg_name):
         with self.mutex:
             return self._do_get_register(reg_name)
@@ -260,8 +264,6 @@ class TMCTRIGORILLA:
             raise config.error(
                 "%s and extruder microsteps must be the same for tmctrigorilla"
                  % (x_name))
-        # Older config format with microsteps in tmc config section
-        ms_config = config
         # Setup mcu communication
         self.fields = tmc.FieldHelper(Fields)
         self.mcu_tmc = MCU_TMC_uart_trigorilla(config,
@@ -273,20 +275,29 @@ class TMCTRIGORILLA:
         tmc.TMCVirtualPinHelper(config, self.mcu_tmc)
         # Register commands
         current_helper = tmc2130.TMCCurrentHelper(config, self.mcu_tmc)
-        cmdhelper = TMCCommandHelperTrigorilla(config,
-                        self.mcu_tmc, current_helper)
+        cmdhelper = TMCCommandHelperTrigorilla(config, self.mcu_tmc, current_helper)
         # Setup basic register values
         self.fields.set_field("mstep_reg_select", True)
-        tmc.TMCStealthchopHelper(config, self.mcu_tmc, TMC_FREQUENCY)
+        tmc.TMCStealthchopHelper(config, self.mcu_tmc)
+        tmc.TMCVcoolthrsHelper(config, self.mcu_tmc)
         # Allow other registers to be set from the config
         set_config_field = self.fields.set_config_field
+        # GCONF
         set_config_field(config, "multistep_filt", True)
+        # CHOPCONF
         set_config_field(config, "toff", 3)
         set_config_field(config, "hstrt", 5)
         set_config_field(config, "hend", 0)
         set_config_field(config, "tbl", 2)
+        # COOLCONF
+        set_config_field(config, "semin", 0)
+        set_config_field(config, "seup", 0)
+        set_config_field(config, "semax", 0)
+        set_config_field(config, "sedn", 0)
+        set_config_field(config, "seimin", 0)
+        # IHOLDIRUN
         set_config_field(config, "iholddelay", 8)
-        set_config_field(config, "tpowerdown", 20)
+        # PWMCONF
         set_config_field(config, "pwm_ofs", 36)
         set_config_field(config, "pwm_grad", 14)
         set_config_field(config, "pwm_freq", 1)
@@ -294,6 +305,9 @@ class TMCTRIGORILLA:
         set_config_field(config, "pwm_autograd", True)
         set_config_field(config, "pwm_reg", 8)
         set_config_field(config, "pwm_lim", 12)
+        # TPOWERDOWN
+        set_config_field(config, "tpowerdown", 20)
+        # SGTHRS
         set_config_field(config, "sgthrs", 0)
 
 def load_config_prefix(config):
