@@ -26,12 +26,6 @@ SECTIONS
         *(.rodata .rodata*)
     } > rom
 
-    .ARM.exidx : {
-      __exidx_start = .;
-      *(.ARM.exidx* .gnu.linkonce.armexidx.*)
-      __exidx_end = .;
-    } > rom
-
     . = ALIGN(4);
     _data_flash = .;
 
