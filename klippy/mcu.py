@@ -87,7 +87,7 @@ class CommandWrapper:
         if cmd_queue is None:
             cmd_queue = serial.get_default_command_queue()
         self._cmd_queue = cmd_queue
-        self._msgtag = msgparser.lookup_msgtag(msgformat) & 0xffffffff
+        self._msgtag = msgparser.lookup_msgid(msgformat) & 0xffffffff
     def send(self, data=(), minclock=0, reqclock=0):
         cmd = self._cmd.encode(data)
         self._serial.raw_send(cmd, minclock, reqclock, self._cmd_queue)
@@ -104,9 +104,9 @@ class CommandWrapper:
 
 class MCU_trsync:
     REASON_ENDSTOP_HIT = 1
-    REASON_COMMS_TIMEOUT = 2
-    REASON_HOST_REQUEST = 3
-    REASON_PAST_END_TIME = 4
+    REASON_HOST_REQUEST = 2
+    REASON_PAST_END_TIME = 3
+    REASON_COMMS_TIMEOUT = 4
     def __init__(self, mcu, trdispatch):
         self._mcu = mcu
         self._trdispatch = trdispatch
@@ -180,7 +180,7 @@ class MCU_trsync:
             if tc is not None:
                 self._trigger_completion = None
                 reason = params['trigger_reason']
-                is_failure = (reason == self.REASON_COMMS_TIMEOUT)
+                is_failure = (reason >= self.REASON_COMMS_TIMEOUT)
                 self._reactor.async_complete(tc, is_failure)
         elif self._home_end_clock is not None:
             clock = self._mcu.clock32_to_clock64(params['clock'])
@@ -279,8 +279,9 @@ class TriggerDispatch:
         ffi_main, ffi_lib = chelper.get_ffi()
         ffi_lib.trdispatch_stop(self._trdispatch)
         res = [trsync.stop() for trsync in self._trsyncs]
-        if any([r == MCU_trsync.REASON_COMMS_TIMEOUT for r in res]):
-            return MCU_trsync.REASON_COMMS_TIMEOUT
+        err_res = [r for r in res if r >= MCU_trsync.REASON_COMMS_TIMEOUT]
+        if err_res:
+            return err_res[0]
         return res[0]
 
 class MCU_endstop:
@@ -334,8 +335,9 @@ class MCU_endstop:
         self._dispatch.wait_end(home_end_time)
         self._home_cmd.send([self._oid, 0, 0, 0, 0, 0, 0, 0])
         res = self._dispatch.stop()
-        if res == MCU_trsync.REASON_COMMS_TIMEOUT:
-            return -1.
+        if res >= MCU_trsync.REASON_COMMS_TIMEOUT:
+            cmderr = self._mcu.get_printer().command_error
+            raise cmderr("Communication timeout during homing")
         if res != MCU_trsync.REASON_ENDSTOP_HIT:
             return 0.
         if self._mcu.is_fileoutput():
@@ -572,9 +574,8 @@ class MCU:
         restart_methods = [None, 'arduino', 'cheetah', 'command', 'rpi_usb']
         self._restart_method = 'command'
         if self._baud:
-            rmethods = {m: m for m in restart_methods}
             self._restart_method = config.getchoice('restart_method',
-                                                    rmethods, None)
+                                                    restart_methods, None)
         self._reset_cmd = self._config_reset_cmd = None
         self._is_mcu_bridge = False
         self._emergency_stop_cmd = None
