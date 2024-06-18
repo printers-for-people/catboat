@@ -41,12 +41,4 @@ file.
 Python 2 is unsupported, and has been for a while. It has no place being used
 anywhere, for anything. We've removed any use of Python 2 from Catboat.
 
-### Fix `newlib-4.3.0` support on STM boards
-
-Previously, ARM-targeted firmware (especially on STM boards) would fail to link
-with `newlib-4.3.0`. As this is the default version shipping on at least one
-distro, this is an issue that will only get worse with time. We fixed this by
-adding an exception index table, which allows us to compile normally, at a small
-size penalty.
-
 [arch-install]: https://github.com/printers-for-people/catboat/wiki/Arch-Linux-ARM-install
