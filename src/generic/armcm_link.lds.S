@@ -26,12 +26,6 @@ SECTIONS
         *(.rodata .rodata*)
     } > rom
 
-    .ARM.exidx : {
-      __exidx_start = .;
-      *(.ARM.exidx* .gnu.linkonce.armexidx.*)
-      __exidx_end = .;
-    } > rom
-
     . = ALIGN(4);
     _data_flash = .;
 
@@ -75,5 +69,8 @@ SECTIONS
         // that isn't needed so no need to include them in the binary.
         *(.init)
         *(.fini)
+        // Don't include exception tables
+        *(.ARM.extab)
+        *(.ARM.exidx)
     }
 }
