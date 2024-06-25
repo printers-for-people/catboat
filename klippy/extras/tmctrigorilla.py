@@ -275,7 +275,8 @@ class TMCTRIGORILLA:
         tmc.TMCVirtualPinHelper(config, self.mcu_tmc)
         # Register commands
         current_helper = tmc2130.TMCCurrentHelper(config, self.mcu_tmc)
-        cmdhelper = TMCCommandHelperTrigorilla(config, self.mcu_tmc, current_helper)
+        cmdhelper = TMCCommandHelperTrigorilla(config, self.mcu_tmc,
+            current_helper)
         # Setup basic register values
         self.fields.set_field("mstep_reg_select", True)
         tmc.TMCStealthchopHelper(config, self.mcu_tmc)
