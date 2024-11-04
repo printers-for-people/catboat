@@ -274,6 +274,7 @@ CONFIG ../../config/generic-bigtreetech-skr-pico-v1.0.cfg
 # Printers using the hc32f460 with serial on PA3 PA2
 DICTIONARY hc32f460-serial-PA3PA2.dict
 CONFIG ../../config/printer-anycubic-kobra-2022.cfg
+CONFIG ../../config/printer-anycubic-kobra-max-2022.cfg
 CONFIG ../../config/printer-anycubic-kobra-go-2022.cfg
 CONFIG ../../config/printer-anycubic-kobra-plus-2022.cfg
 
