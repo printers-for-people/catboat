@@ -10,6 +10,12 @@ All dates in this document are approximate.
 
 20241202: The `sense_resistor` parameter is now mandatory with no default value.
 
+20241201: In some cases Klipper may have ignored leading characters or
+spaces in a traditional G-Code command. For example, "99M123" may have
+been interpreted as "M123" and "M 321" may have been interpreted as
+"M321". Klipper will now report these cases with an "Unknown command"
+warning.
+
 20241125: The `off_below` parameter in fans config section is
 deprecated. It will be removed in the near future. Use
 [`min_power`](./Config_Reference.md#fans)
