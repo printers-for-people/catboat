@@ -5662,6 +5662,52 @@ cs_pin:
 #   above parameters.
 ```
 
+### ⚠️ [tools_calibrate]
+
+Multi-toolhead nozzle offset calibration, using a 3-axis nozzle contact probe such as
+[Zruncho3D's Nudge Probe](https://github.com/zruncho3d/nudge).
+
+```
+[tools_calibrate]
+pin:
+travel_speed: 20
+#   X and Y travel speed in mm/sec
+spread: 5
+#spread_x:
+#spread_y:
+#   X and Y travel distance around the probe
+#initial_spread:
+#initial_spread_x:
+#initial_spread_y:
+#   X and Y travel distance for the initial probe locating moves
+lower_z: 1.0
+#   Distance to lower in Z for contact with the sides of the probe
+speed: 2
+#   The speed (in mm/sec) to retract between probes
+lift_speed: 4
+#   Z Lift speed after probing
+final_lift_z: 6
+#   Z lift distance after calibration, must be greater than any
+#   height variance between tools
+trigger_to_bottom_z: 0.25
+#   Offset from probe trigger to vertical motion bottoms out.
+#   decrease if the nozzle is too high, increase if too low.
+#samples: 1
+#   The number of times to probe each point. The probed z-values will
+#   be averaged. The default is to probe 1 time.
+#sample_retract_dist: 2.0
+#   The distance (in mm) to lift the toolhead between each sample (if
+#   sampling more than once). The default is 2mm.
+#samples_result: average
+#   The calculation method when sampling more than once - either
+#   "median" or "average". The default is average.
+#samples_tolerance: 0.100
+#   The maximum Z distance (in mm) that a sample may differ from other
+#   samples. If this tolerance is exceeded then either an error is
+#   reported or the attempt is restarted (see
+#   samples_tolerance_retries). The default is 0.100mm.
+```
+
 ### [trad_rack]
 
 Trad Rack multimaterial system support. See the following documents from the

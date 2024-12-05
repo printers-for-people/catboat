@@ -568,6 +568,15 @@ on a cartesian, hybrid_corexy or hybrid_corexz robot
 - `carriage_1`: The mode of the carriage 1. Possible values are:
   "INACTIVE", "PRIMARY", "COPY", and "MIRROR".
 
+## tools_calibrate
+
+The following information is available in the
+[tools_calibrate](Config_Reference.md#️-tools_calibrate) object:
+- `sensor_location`: Once calibrated, the location of the sensor
+- `last_result`: The last tool calibration result
+- `calibration_probe_inactive`: Status of the calibration probe as of
+  the last `TOOL_CALIBRATE_QUERY_PROBE`
+
 ## trad_rack
 
 The following informatin is available in the

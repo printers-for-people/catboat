@@ -1554,6 +1554,33 @@ The velocity argument is not available on CoreXY. With no arguments, this
 command responds with the movement direction with the most acceleration or
 velocity.
 
+### ⚠️ [tools_calibrate]
+
+The following commands are available when the
+[tools_calibrate config section](Config_Reference.md#tools_calibrate) is enabled.
+
+#### TOOL_CALIBRATE_QUERY_PROBE
+`TOOL_CALIBRATE_QUERY_PROBE`: Query the current calibration probe state.
+
+#### TOOL_LOCATE_SENSOR
+`TOOL_LOCATE_SENSOR`: Locate the sensor relative to the initial tool. The initial
+tool is the 0 offset, which other tools are calibrated against.
+
+Before running `TOOL_LOCATE_SENSOR`, position your primary toolhead centered over
+the calibration probe.
+
+#### TOOL_CALIBRATE_TOOL_OFFSET
+`TOOL_CALIBRATE_TOOL_OFFSET`: After locating the sensor with your initial tool,
+position each additional tool over the sensor and run `TOOL_CALIBRATE_TOOL_OFFSET`
+to find their offsets.
+
+#### TOOL_CALIBRATE_SAVE_TOOL_OFFSET
+`TOOL_CALIBRATE_SAVE_TOOL_OFFSET MACRO=<macro_name> VARIABLE=<variable_name> [VALUE="({x:0.6f}, {y:0.6f}, {z:0.6f})"]`:
+Save the last calibration result to a macro variable.
+
+`TOOL_CALIBRATE_SAVE_TOOL_OFFSET SECTION= ATTRIBUTE= [VALUE="{x:0.6f}, {y:0.6f}, {z:0.6f}"]`:
+Save the last calibration result to a field in your configuration. Calibration data saved this way will not take effect until after a `RESTART` of your printer.
+
 ### [trad_rack]
 
 The following commands are available when the
