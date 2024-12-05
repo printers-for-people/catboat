@@ -196,6 +196,8 @@ class GCodeDispatch:
                 del self.base_gcode_handlers[cmd]
             self._build_status_commands()
             return old_cmd
+        if desc is None and func.__doc__:
+            desc = func.__doc__
         if cmd in self.ready_gcode_handlers:
             raise self.printer.config_error(
                 "gcode command %s already registered" % (cmd,)

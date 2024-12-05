@@ -213,7 +213,12 @@ class Printer:
         for section_config in config.get_prefix_sections(""):
             self.load_object(config, section_config.get_name(), None)
         # kalico on-by-default extras
-        for section_config in ["force_move", "respond", "exclude_object"]:
+        for section_config in [
+            "force_move",
+            "respond",
+            "exclude_object",
+            "telemetry",
+        ]:
             self.load_object(config, section_config, None)
         for m in [toolhead]:
             m.add_printer_objects(config)
@@ -546,6 +551,7 @@ def main():
     extra_git_desc += "\nRemote: %s" % (git_info["remote"])
     extra_git_desc += "\nTracked URL: %s" % (git_info["url"])
     start_args["software_version"] = git_vers
+    start_args["git_branch"] = git_info["branch"]
     start_args["git_remote"] = git_info["remote"]
     start_args["cpu_info"] = util.get_cpu_info()
     if bglogger is not None:
