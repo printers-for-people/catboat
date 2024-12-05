@@ -9,7 +9,7 @@ import util, reactor, queuelogger, msgproto
 import gcode, configfile, pins, mcu, toolhead, webhooks
 from extras.danger_options import get_danger_options
 
-APP_NAME = "Danger-Klipper"
+APP_NAME = "Kalico"
 
 message_ready = "Printer is ready"
 
@@ -63,7 +63,7 @@ class Printer:
 
     def __init__(self, main_reactor, bglogger, start_args):
         if sys.version_info[0] < 3:
-            logging.error("DangerKlipper requires Python 3")
+            logging.error("Kalico requires Python 3")
             sys.exit(1)
 
         self.bglogger = bglogger
@@ -212,7 +212,7 @@ class Printer:
             m.add_printer_objects(config)
         for section_config in config.get_prefix_sections(""):
             self.load_object(config, section_config.get_name(), None)
-        # dangerklipper on-by-default extras
+        # kalico on-by-default extras
         for section_config in ["force_move", "respond", "exclude_object"]:
             self.load_object(config, section_config, None)
         for m in [toolhead]:
@@ -255,7 +255,7 @@ class Printer:
             msg_updated.append("<none>")
 
         version_msg = [
-            "\nYour Klipper version is: %s\n" % host_version,
+            "\nYour Kalico version is: %s\n" % host_version,
             "MCU(s) which should be updated:",
             "\n%s\n" % "\n".join(msg_update),
             "Up-to-date MCU(s):",
@@ -546,6 +546,7 @@ def main():
     extra_git_desc += "\nRemote: %s" % (git_info["remote"])
     extra_git_desc += "\nTracked URL: %s" % (git_info["url"])
     start_args["software_version"] = git_vers
+    start_args["git_remote"] = git_info["remote"]
     start_args["cpu_info"] = util.get_cpu_info()
     if bglogger is not None:
         versions = "\n".join(
