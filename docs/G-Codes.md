@@ -1618,7 +1618,7 @@ specified and it is higher than the extruder's current temperature,
 then the extruder will be heated to at least `MIN_TEMP` before
 unloading/loading; the current extruder temperature target may be used
 instead if it is higher than `MIN_TEMP`, and if not then
-[tr_last_heater_target](https://github.com/Annex-Engineering/TradRack/blob/main/docs/klipper/Save_Variables.md)
+[tr_last_heater_target](https://github.com/Annex-Engineering/TradRack/blob/main/docs/kalico/Save_Variables.md)
 may be used. If `EXACT_TEMP` is specified, the extruder will be heated
 to `EXACT_TEMP` before unloading/loading, regardless of any other
 temperature setting. If any of the optional length parameters are
@@ -1643,7 +1643,7 @@ the extruder's current temperature, then the extruder will be heated
 to at least `MIN_TEMP` before unloading; the current extruder
 temperature target may be used instead if it is higher than
 `MIN_TEMP`, and if not then
-[tr_last_heater_target](https://github.com/Annex-Engineering/TradRack/blob/main/docs/klipper/Save_Variables.md)
+[tr_last_heater_target](https://github.com/Annex-Engineering/TradRack/blob/main/docs/kalico/Save_Variables.md)
 may be used. If `EXACT_TEMP` is specified, the extruder will be heated
 to `EXACT_TEMP` before unloading/loading, regardless of any other
 temperature setting.
@@ -1738,7 +1738,7 @@ hotend_load_length will be set to the value passed in. If the ADJUST
 parameter is used, the adjustment will be added to the current value
 of hotend_load_length.
 
-### TR_DISCARD_BOWDEN_LENGTHS
+#### TR_DISCARD_BOWDEN_LENGTHS
 `TR_DISCARD_BOWDEN_LENGTHS [MODE=[ALL|LOAD|UNLOAD]]`: Discards saved
 values for "bowden_load_length" and/or "bowden_unload_length" (see
 [bowden lengths](https://github.com/Annex-Engineering/TradRack/blob/main/docs/Tuning.md#bowden-lengths)
@@ -1746,7 +1746,7 @@ for details on how these settings are used). These settings will each
 be reset to the value of `bowden_length` from the
 [trad_rack config section](Config_Reference.md#trad_rack), and empty
 dictionaries will be saved for
-[tr_calib_bowden_load_length and tr_calib_bowden_unload_length](https://github.com/Annex-Engineering/TradRack/blob/main/docs/klipper/Save_Variables.md).
+[tr_calib_bowden_load_length and tr_calib_bowden_unload_length](https://github.com/Annex-Engineering/TradRack/blob/main/docs/kalico/Save_Variables.md).
 "bowden_load_length" and tr_calib_bowden_load_length will be
 affected if MODE=LOAD is specified, "bowden_unload_length" and
 tr_calib_bowden_unload_length will be affected if MODE=UNLOAD is

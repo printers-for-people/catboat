@@ -5714,7 +5714,7 @@ Trad Rack multimaterial system support. See the following documents from the
 TradRack repo for additional information:
 - [Tuning.md](https://github.com/Annex-Engineering/TradRack/blob/main/docs/Tuning.md):
   document referenced by some of the config options below.
-- [Trad Rack config reference document](https://github.com/Annex-Engineering/TradRack/blob/main/docs/klipper/Config_Reference.md): contains info on additional config
+- [Trad Rack config reference document](https://github.com/Annex-Engineering/TradRack/blob/main/docs/kalico/Config_Reference.md): contains info on additional config
   sections that are expected to be used alongside [trad_rack].
 
 ```
