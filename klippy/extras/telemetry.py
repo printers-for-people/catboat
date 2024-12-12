@@ -16,23 +16,39 @@ import urllib.request
 import uuid
 
 
-class KalicoTelemetryPrompt:
-    "Kalico extra prompting the user to enable or disable telemetry"
+class KalicoTelementry:
+    TELEMETRY_ENDPOINT = "https://telemetry.kalico.gg/collect"
 
     def __init__(self, config):
         self.printer = config.get_printer()
+        self.enabled = config.getboolean("enabled", None)
 
         gcode = self.printer.lookup_object("gcode")
         gcode.register_command(
-            "ENABLE_TELEMETRY", self.cmd_ENABLE_TELEMETRY, True
-        )
-        gcode.register_command(
-            "DISABLE_TELEMETRY", self.cmd_DISABLE_TELEMETRY, True
+            "TELEMETRY_EXAMPLE", self.cmd_TELEMETRY_EXAMPLE, True
         )
 
-        self.printer.register_event_handler("klippy:ready", self._handle_ready)
+        if self.enabled is not True:
+            gcode.register_command(
+                "ENABLE_TELEMETRY", self.cmd_ENABLE_TELEMETRY, True
+            )
 
-    def _handle_ready(self):
+        if self.enabled is not False:
+            gcode.register_command(
+                "DISABLE_TELEMETRY", self.cmd_DISABLE_TELEMETRY, True
+            )
+
+        if self.enabled is None:
+            self.printer.register_event_handler(
+                "klippy:ready", self._telemetry_prompt
+            )
+
+        if self.enabled:
+            self.printer.register_event_handler(
+                "klippy:ready", self._handle_ready
+            )
+
+    def _telemetry_prompt(self):
         gcode = self.printer.lookup_object("gcode")
 
         gcode.respond_info(
@@ -77,36 +93,8 @@ class KalicoTelemetryPrompt:
             "file with this setting and restart the printer."
         )
 
-
-class KalicoTelementry:
-    TELEMETRY_ENDPOINT = "https://telemetry.kalico.gg/collect"
-
-    def __init__(self, config):
-        self.printer = config.get_printer()
-        self.enabled = config.getboolean("enabled", None)
-
-        self.last_report = None
-
-        gcode = self.printer.lookup_object("gcode")
-
-        if self.enabled is not False:
-            gcode.register_command(
-                "TELEMETRY_EXAMPLE", self.cmd_TELEMETRY_EXAMPLE, True
-            )
-
-        if self.enabled is None:
-            self.telemetry_prompt = KalicoTelemetryPrompt(config)
-
-        elif self.enabled:
-            self.printer.register_event_handler(
-                "klippy:ready", self._handle_ready
-            )
-
     def get_status(self, eventtime=None):
-        return {
-            "enabled": self.enabled,
-            "last_report": self.last_report,
-        }
+        return {"enabled": self.enabled}
 
     def _handle_ready(self):
         try:
