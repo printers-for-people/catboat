@@ -571,7 +571,7 @@ def main():
             "No log file specified!" " Severe timing issues may result!"
         )
 
-    compat.hotpatch_modules()
+    compat.install()
 
     gc.disable()
 
