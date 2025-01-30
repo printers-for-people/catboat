@@ -319,7 +319,8 @@ position_max:
 #   The default is equal to `homing_retract_dist`.
 #second_homing_speed:
 #   Velocity (in mm/s) of the stepper when performing the second home.
-#   The default is homing_speed/2.
+#   The default is homing_speed/2. If `use_sensorless_homing` is
+#   true, the default is homing_speed.
 #homing_positive_dir:
 #   If true, homing will cause the stepper to move in a positive
 #   direction (away from zero); if false, home towards zero. It is
