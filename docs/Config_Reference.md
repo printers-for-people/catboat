@@ -140,6 +140,11 @@ A collection of Kalico-specific system options
 #log_velocity_limit_changes: True
 #   If changes to velocity limits should be logged. If False, velocity limits will only
 #   be logged at rollover. Some slicers emit very frequent SET_VELOCITY_LIMIT commands
+#   The default is True
+#log_pressure_advance_changes: True
+#   If changes to pressure advance should be logged. If false, pressure advance data
+#   will only be logged at rollover.
+#   The default is True.
 #log_shutdown_info: True
 #   If we should log detailed crash info when an exception occurs
 #   Most of it is overly-verbose and fluff and we still get a stack trace
