@@ -468,6 +468,8 @@ class PrinterRail:
             "min_home_dist", self.homing_retract_dist, minval=0.0
         )
 
+        self.homing_accel = config.getfloat("homing_accel", None, above=0.0)
+
         if self.homing_positive_dir is None:
             axis_len = self.position_max - self.position_min
             if self.position_endstop <= self.position_min + axis_len / 4.0:
@@ -514,6 +516,7 @@ class PrinterRail:
                 "second_homing_speed",
                 "use_sensorless_homing",
                 "min_home_dist",
+                "accel",
             ],
         )(
             self.homing_speed,
@@ -524,6 +527,7 @@ class PrinterRail:
             self.second_homing_speed,
             self.use_sensorless_homing,
             self.min_home_dist,
+            self.homing_accel,
         )
         return homing_info
 
