@@ -34,8 +34,12 @@ PRU_DIR=${BUILD_DIR}/pru-gcc
 
 if [ ! -f ${PRU_FILE} ]; then
     cd ${BUILD_DIR}
-    git config --global user.email "you@example.com"
-    git config --global user.name "Your Name"
+    if [ "$(git config --global user.email)" = "" ]; then
+        git config --global user.email "you@example.com"
+    fi
+    if [ "$(git config --global user.name)" = "" ]; then
+        git config --global user.name "Your Name"
+    fi
     git clone https://github.com/dinuxbg/gnupru -b 2024.05 --depth 1
     cd gnupru
     export PREFIX=${PRU_DIR}
