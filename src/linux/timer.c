@@ -19,8 +19,6 @@ static struct {
     uint32_t last_read_time;
     // Fields for converting from a systime to ticks
     time_t start_sec;
-    // Flags for tracking irq_enable()/irq_disable()
-    uint32_t must_wake_timers;
     // Time of next software timer (also used to convert from ticks to systime)
     uint32_t next_wake_counter;
     struct timespec next_wake;
@@ -29,6 +27,8 @@ static struct {
     sigset_t ss_alarm, ss_sleep;
 } TimerInfo;
 
+// Flags for tracking irq_enable()/irq_disable()
+volatile sig_atomic_t must_wake_timers;
 
 /****************************************************************
  * Timespec helpers
@@ -167,7 +167,7 @@ timer_dispatch(void)
     it.it_interval = (struct timespec){0, 0};
     TimerInfo.next_wake = it.it_value = timespec_from_time(next);
     TimerInfo.next_wake_counter = next;
-    TimerInfo.must_wake_timers = 0;
+    must_wake_timers = 0;
     timer_settime(TimerInfo.t_alarm, TIMER_ABSTIME, &it, NULL);
 }
 
@@ -175,7 +175,7 @@ timer_dispatch(void)
 static void
 timer_signal(int signal)
 {
-    TimerInfo.must_wake_timers = 1;
+    must_wake_timers = 1;
 }
 
 void
@@ -268,9 +268,9 @@ void
 irq_wait(void)
 {
     // Must atomically sleep until signaled
-    if (!readl(&TimerInfo.must_wake_timers)) {
+    if (!must_wake_timers) {
         timer_disable_signals();
-        if (!TimerInfo.must_wake_timers)
+        if (!must_wake_timers)
             console_sleep(&TimerInfo.ss_sleep);
         timer_enable_signals();
     }
@@ -280,6 +280,6 @@ irq_wait(void)
 void
 irq_poll(void)
 {
-    if (readl(&TimerInfo.must_wake_timers))
+    if (must_wake_timers)
         timer_dispatch();
 }
