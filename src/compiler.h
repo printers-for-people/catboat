@@ -2,7 +2,7 @@
 #define __COMPILER_H
 // Low level definitions for C languange and gcc compiler.
 
-#define barrier() __asm__ __volatile__("": : :"memory")
+#define barrier() __atomic_thread_fence(__ATOMIC_SEQ_CST)
 
 #define likely(x)       __builtin_expect(!!(x), 1)
 #define unlikely(x)     __builtin_expect(!!(x), 0)

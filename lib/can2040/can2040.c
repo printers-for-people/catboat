@@ -28,7 +28,7 @@
 #endif
 
 // Helper compiler definitions
-#define barrier() __asm__ __volatile__("": : :"memory")
+#define barrier() __asm__ __volatile__("dmb": : :"memory")
 #define likely(x)       __builtin_expect(!!(x), 1)
 #define unlikely(x)     __builtin_expect(!!(x), 0)
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
