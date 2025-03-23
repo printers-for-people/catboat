@@ -294,9 +294,6 @@ class MCU_trsync:
         return params["trigger_reason"]
 
 
-TRSYNC_SINGLE_MCU_TIMEOUT = 0.250
-
-
 class TriggerDispatch:
     def __init__(self, mcu):
         self._mcu = mcu
@@ -338,7 +335,7 @@ class TriggerDispatch:
         self._trigger_completion = reactor.completion()
         expire_timeout = get_danger_options().multi_mcu_trsync_timeout
         if len(self._trsyncs) == 1:
-            expire_timeout = TRSYNC_SINGLE_MCU_TIMEOUT
+            expire_timeout = get_danger_options().single_mcu_trsync_timeout
         for i, trsync in enumerate(self._trsyncs):
             report_offset = float(i) / len(self._trsyncs)
             trsync.start(
