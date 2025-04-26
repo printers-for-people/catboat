@@ -271,6 +271,8 @@ config HAVE_BOOTLOADER_REQUEST
     bool
 config HAVE_LIMITED_CODE_SIZE
     bool
+config HAVE_SOFTWARE_DIVIDE_REQUIRED
+    bool
 
 config INLINE_STEPPER_HACK
     # Enables gcc to inline stepper_event() into the main timer irq handler
