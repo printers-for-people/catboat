@@ -4,30 +4,44 @@
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 import logging, collections
-import stepper
+from klippy import stepper
 
 
 ######################################################################
 # Field helpers
 ######################################################################
 
+
 # Return the position of the first bit set in a mask
 def ffs(mask):
     return (mask & -mask).bit_length() - 1
 
+
 class FieldHelper:
-    def __init__(self, all_fields, signed_fields=[], field_formatters={},
-                 registers=None):
+    def __init__(
+        self,
+        all_fields,
+        signed_fields=None,
+        field_formatters=None,
+        registers=None,
+    ):
+        if field_formatters is None:
+            field_formatters = {}
+        if signed_fields is None:
+            signed_fields = []
         self.all_fields = all_fields
         self.signed_fields = {sf: 1 for sf in signed_fields}
         self.field_formatters = field_formatters
         self.registers = registers
         if self.registers is None:
             self.registers = collections.OrderedDict()
-        self.field_to_register = { f: r for r, fields in self.all_fields.items()
-                                   for f in fields }
+        self.field_to_register = {
+            f: r for r, fields in self.all_fields.items() for f in fields
+        }
+
     def lookup_register(self, field_name, default=None):
         return self.field_to_register.get(field_name, default)
+
     def get_field(self, field_name, reg_value=None, reg_name=None):
         # Returns value of the register field
         if reg_name is None:
@@ -36,9 +50,13 @@ class FieldHelper:
             reg_value = self.registers.get(reg_name, 0)
         mask = self.all_fields[reg_name][field_name]
         field_value = (reg_value & mask) >> ffs(mask)
-        if field_name in self.signed_fields and ((reg_value & mask)<<1) > mask:
-            field_value -= (1 << field_value.bit_length())
+        if (
+            field_name in self.signed_fields
+            and ((reg_value & mask) << 1) > mask
+        ):
+            field_value -= 1 << field_value.bit_length()
         return field_value
+
     def set_field(self, field_name, field_value, reg_value=None, reg_name=None):
         # Returns register value with field bits filled with supplied value
         if reg_name is None:
@@ -49,6 +67,7 @@ class FieldHelper:
         new_value = (reg_value & ~mask) | ((field_value << ffs(mask)) & mask)
         self.registers[reg_name] = new_value
         return new_value
+
     def set_config_field(self, config, field_name, default):
         # Allow a field to be set from the config file
         config_name = "driver_" + field_name.upper()
@@ -58,11 +77,18 @@ class FieldHelper:
         if maxval == 1:
             val = config.getboolean(config_name, default)
         elif field_name in self.signed_fields:
-            val = config.getint(config_name, default,
-                                minval=-(maxval//2 + 1), maxval=maxval//2)
+            val = config.getint(
+                config_name,
+                default,
+                minval=-(maxval // 2 + 1),
+                maxval=maxval // 2,
+            )
         else:
             val = config.getint(config_name, default, minval=0, maxval=maxval)
+        if default is None and val is None:
+            return
         return self.set_field(field_name, val)
+
     def pretty_format(self, reg_name, reg_value):
         # Provide a string description of a register
         reg_fields = self.all_fields.get(reg_name, {})
@@ -74,22 +100,26 @@ class FieldHelper:
             if sval and sval != "0":
                 fields.append(" %s=%s" % (field_name, sval))
         return "%-11s %08x%s" % (reg_name + ":", reg_value, "".join(fields))
+
     def get_reg_fields(self, reg_name, reg_value):
         # Provide fields found in a register
         reg_fields = self.all_fields.get(reg_name, {})
-        return {field_name: self.get_field(field_name, reg_value, reg_name)
-                for field_name, mask in reg_fields.items()}
+        return {
+            field_name: self.get_field(field_name, reg_value, reg_name)
+            for field_name, mask in reg_fields.items()
+        }
 
 
 ######################################################################
 # Periodic error checking
 ######################################################################
 
+
 class TMCErrorCheck:
     def __init__(self, config, mcu_tmc):
         self.printer = config.get_printer()
         name_parts = config.get_name().split()
-        self.stepper_name = ' '.join(name_parts[1:])
+        self.stepper_name = " ".join(name_parts[1:])
         self.mcu_tmc = mcu_tmc
         self.fields = mcu_tmc.get_fields()
         self.check_timer = None
@@ -97,7 +127,7 @@ class TMCErrorCheck:
         # Setup for GSTAT query
         reg_name = self.fields.lookup_register("drv_err")
         if reg_name is not None:
-            self.gstat_reg_info = [0, reg_name, 0xffffffff, 0xffffffff, 0]
+            self.gstat_reg_info = [0, reg_name, 0xFFFFFFFF, 0xFFFFFFFF, 0]
         else:
             self.gstat_reg_info = None
         self.clear_gstat = True
@@ -105,11 +135,11 @@ class TMCErrorCheck:
         self.irun_field = "irun"
         reg_name = "DRV_STATUS"
         mask = err_mask = cs_actual_mask = 0
-        if name_parts[0] == 'tmc2130':
+        if name_parts[0] == "tmc2130":
             # TMC2130 driver quirks
             self.clear_gstat = False
             cs_actual_mask = self.fields.all_fields[reg_name]["cs_actual"]
-        elif name_parts[0] == 'tmc2660':
+        elif name_parts[0] == "tmc2660":
             # TMC2660 driver quirks
             self.irun_field = "cs"
             reg_name = "READRSP@RDSEL2"
@@ -126,13 +156,14 @@ class TMCErrorCheck:
         self.adc_temp = None
         self.adc_temp_reg = self.fields.lookup_register("adc_temp")
         if self.adc_temp_reg is not None:
-            pheaters = self.printer.load_object(config, 'heaters')
+            pheaters = self.printer.load_object(config, "heaters")
             pheaters.register_monitor(config)
+
     def _query_register(self, reg_info, try_clear=False):
         last_value, reg_name, mask, err_mask, cs_actual_mask = reg_info
         cleared_flags = 0
         count = 0
-        while 1:
+        while True:
             try:
                 val = self.mcu_tmc.get_register(reg_name)
             except self.printer.command_error as e:
@@ -153,20 +184,23 @@ class TMCErrorCheck:
                 irun = self.fields.get_field(self.irun_field)
                 if self.check_timer is None or irun < 4:
                     break
-                if (self.irun_field == "irun"
-                    and not self.fields.get_field("ihold")):
+                if self.irun_field == "irun" and not self.fields.get_field(
+                    "ihold"
+                ):
                     break
                 # CS_ACTUAL field of zero - indicates a driver reset
             count += 1
             if count >= 3:
                 fmt = self.fields.pretty_format(reg_name, val)
-                raise self.printer.command_error("TMC '%s' reports error: %s"
-                                                 % (self.stepper_name, fmt))
+                raise self.printer.command_error(
+                    "TMC '%s' reports error: %s" % (self.stepper_name, fmt)
+                )
             if try_clear and val & err_mask:
                 try_clear = False
                 cleared_flags |= val & err_mask
                 self.mcu_tmc.set_register(reg_name, val & err_mask)
         return cleared_flags
+
     def _query_temperature(self):
         try:
             self.adc_temp = self.mcu_tmc.get_register(self.adc_temp_reg)
@@ -174,6 +208,7 @@ class TMCErrorCheck:
             # Ignore comms error for temperature
             self.adc_temp = None
             return
+
     def _do_periodic_check(self, eventtime):
         try:
             self._query_register(self.drv_status_reg_info)
@@ -184,32 +219,37 @@ class TMCErrorCheck:
         except self.printer.command_error as e:
             self.printer.invoke_shutdown(str(e))
             return self.printer.get_reactor().NEVER
-        return eventtime + 1.
+        return eventtime + 1.0
+
     def stop_checks(self):
         if self.check_timer is None:
             return
         self.printer.get_reactor().unregister_timer(self.check_timer)
         self.check_timer = None
+
     def start_checks(self):
         if self.check_timer is not None:
             self.stop_checks()
         cleared_flags = 0
         self._query_register(self.drv_status_reg_info)
         if self.gstat_reg_info is not None:
-            cleared_flags = self._query_register(self.gstat_reg_info,
-                                                 try_clear=self.clear_gstat)
+            cleared_flags = self._query_register(
+                self.gstat_reg_info, try_clear=self.clear_gstat
+            )
         reactor = self.printer.get_reactor()
         curtime = reactor.monotonic()
-        self.check_timer = reactor.register_timer(self._do_periodic_check,
-                                                  curtime + 1.)
+        self.check_timer = reactor.register_timer(
+            self._do_periodic_check, curtime + 1.0
+        )
         if cleared_flags:
             reset_mask = self.fields.all_fields["GSTAT"]["reset"]
             if cleared_flags & reset_mask:
                 return True
         return False
+
     def get_status(self, eventtime=None):
         if self.check_timer is None:
-            return {'drv_status': None, 'temperature': None}
+            return {"drv_status": None, "temperature": None}
         temp = None
         if self.adc_temp is not None:
             temp = round((self.adc_temp - 2038) / 7.7, 2)
@@ -218,17 +258,18 @@ class TMCErrorCheck:
             self.last_drv_status = last_value
             fields = self.fields.get_reg_fields(reg_name, last_value)
             self.last_drv_fields = {n: v for n, v in fields.items() if v}
-        return {'drv_status': self.last_drv_fields, 'temperature': temp}
+        return {"drv_status": self.last_drv_fields, "temperature": temp}
 
 
 ######################################################################
 # G-Code command helpers
 ######################################################################
 
+
 class TMCCommandHelper:
     def __init__(self, config, mcu_tmc, current_helper):
         self.printer = config.get_printer()
-        self.stepper_name = ' '.join(config.get_name().split()[1:])
+        self.stepper_name = " ".join(config.get_name().split()[1:])
         self.name = config.get_name().split()[-1]
         self.mcu_tmc = mcu_tmc
         self.current_helper = current_helper
@@ -239,83 +280,145 @@ class TMCCommandHelper:
         self.mcu_phase_offset = None
         self.stepper = None
         self.stepper_enable = self.printer.load_object(config, "stepper_enable")
-        self.printer.register_event_handler("stepper:sync_mcu_position",
-                                            self._handle_sync_mcu_pos)
-        self.printer.register_event_handler("stepper:set_sdir_inverted",
-                                            self._handle_sync_mcu_pos)
-        self.printer.register_event_handler("klippy:mcu_identify",
-                                            self._handle_mcu_identify)
-        self.printer.register_event_handler("klippy:connect",
-                                            self._handle_connect)
+        self.printer.register_event_handler(
+            "stepper:sync_mcu_position", self._handle_sync_mcu_pos
+        )
+        self.printer.register_event_handler(
+            "stepper:set_sdir_inverted", self._handle_sync_mcu_pos
+        )
+        self.printer.register_event_handler(
+            "klippy:mcu_identify", self._handle_mcu_identify
+        )
+        self.printer.register_event_handler(
+            "klippy:connect", self._handle_connect
+        )
         # Set microstep config options
         TMCMicrostepHelper(config, mcu_tmc)
         # Register commands
         gcode = self.printer.lookup_object("gcode")
-        gcode.register_mux_command("SET_TMC_FIELD", "STEPPER", self.name,
-                                   self.cmd_SET_TMC_FIELD,
-                                   desc=self.cmd_SET_TMC_FIELD_help)
-        gcode.register_mux_command("INIT_TMC", "STEPPER", self.name,
-                                   self.cmd_INIT_TMC,
-                                   desc=self.cmd_INIT_TMC_help)
-        gcode.register_mux_command("SET_TMC_CURRENT", "STEPPER", self.name,
-                                   self.cmd_SET_TMC_CURRENT,
-                                   desc=self.cmd_SET_TMC_CURRENT_help)
+        gcode.register_mux_command(
+            "SET_TMC_FIELD",
+            "STEPPER",
+            self.name,
+            self.cmd_SET_TMC_FIELD,
+            desc=self.cmd_SET_TMC_FIELD_help,
+        )
+        gcode.register_mux_command(
+            "INIT_TMC",
+            "STEPPER",
+            self.name,
+            self.cmd_INIT_TMC,
+            desc=self.cmd_INIT_TMC_help,
+        )
+        gcode.register_mux_command(
+            "SET_TMC_CURRENT",
+            "STEPPER",
+            self.name,
+            self.cmd_SET_TMC_CURRENT,
+            desc=self.cmd_SET_TMC_CURRENT_help,
+        )
+
     def _init_registers(self, print_time=None):
         # Send registers
         for reg_name in list(self.fields.registers.keys()):
-            val = self.fields.registers[reg_name] # Val may change during loop
+            val = self.fields.registers[reg_name]  # Val may change during loop
             self.mcu_tmc.set_register(reg_name, val, print_time)
+
     cmd_INIT_TMC_help = "Initialize TMC stepper driver registers"
+
     def cmd_INIT_TMC(self, gcmd):
         logging.info("INIT_TMC %s", self.name)
-        print_time = self.printer.lookup_object('toolhead').get_last_move_time()
+        print_time = self.printer.lookup_object("toolhead").get_last_move_time()
         self._init_registers(print_time)
+
     cmd_SET_TMC_FIELD_help = "Set a register field of a TMC driver"
+
     def cmd_SET_TMC_FIELD(self, gcmd):
-        field_name = gcmd.get('FIELD').lower()
+        field_name = gcmd.get("FIELD").lower()
         reg_name = self.fields.lookup_register(field_name, None)
         if reg_name is None:
             raise gcmd.error("Unknown field name '%s'" % (field_name,))
-        value = gcmd.get_int('VALUE', None)
-        velocity = gcmd.get_float('VELOCITY', None, minval=0.)
+        value = gcmd.get_int("VALUE", None)
+        velocity = gcmd.get_float("VELOCITY", None, minval=0.0)
         if (value is None) == (velocity is None):
             raise gcmd.error("Specify either VALUE or VELOCITY")
         if velocity is not None:
             if self.mcu_tmc.get_tmc_frequency() is None:
                 raise gcmd.error(
-                    "VELOCITY parameter not supported by this driver")
-            value = TMCtstepHelper(self.mcu_tmc, velocity,
-                                   pstepper=self.stepper)
+                    "VELOCITY parameter not supported by this driver"
+                )
+            value = TMCtstepHelper(
+                self.mcu_tmc, velocity, pstepper=self.stepper
+            )
         reg_val = self.fields.set_field(field_name, value)
-        print_time = self.printer.lookup_object('toolhead').get_last_move_time()
+        print_time = self.printer.lookup_object("toolhead").get_last_move_time()
         self.mcu_tmc.set_register(reg_name, reg_val, print_time)
+
     cmd_SET_TMC_CURRENT_help = "Set the current of a TMC driver"
+
     def cmd_SET_TMC_CURRENT(self, gcmd):
         ch = self.current_helper
-        prev_cur, prev_hold_cur, req_hold_cur, max_cur = ch.get_current()
-        run_current = gcmd.get_float('CURRENT', None, minval=0., maxval=max_cur)
-        hold_current = gcmd.get_float('HOLDCURRENT', None,
-                                      above=0., maxval=max_cur)
-        if run_current is not None or hold_current is not None:
-            if run_current is None:
+        (
+            prev_cur,
+            prev_hold_cur,
+            req_hold_cur,
+            max_cur,
+            prev_home_cur,
+        ) = ch.get_current()
+        run_current = gcmd.get_float(
+            "CURRENT", None, minval=0.0, maxval=max_cur
+        )
+        hold_current = gcmd.get_float(
+            "HOLDCURRENT", None, above=0.0, maxval=max_cur
+        )
+        home_current = gcmd.get_float(
+            "HOMECURRENT", None, above=0.0, maxval=max_cur
+        )
+        if (
+            run_current is not None
+            or hold_current is not None
+            or home_current is not None
+        ):
+            if run_current is not None:
+                ch.set_run_current(run_current)
+            else:
                 run_current = prev_cur
+
             if hold_current is None:
                 hold_current = req_hold_cur
-            toolhead = self.printer.lookup_object('toolhead')
+
+            if home_current is not None:
+                ch.set_home_current(home_current)
+
+            toolhead = self.printer.lookup_object("toolhead")
             print_time = toolhead.get_last_move_time()
             ch.set_current(run_current, hold_current, print_time)
-            prev_cur, prev_hold_cur, req_hold_cur, max_cur = ch.get_current()
+            (
+                prev_cur,
+                prev_hold_cur,
+                req_hold_cur,
+                max_cur,
+                prev_home_cur,
+            ) = ch.get_current()
         # Report values
         if prev_hold_cur is None:
-            gcmd.respond_info("Run Current: %0.2fA" % (prev_cur,))
+            gcmd.respond_info(
+                "Run Current: %0.2fA Home Current: %0.2fA"
+                % (prev_cur, prev_home_cur)
+            )
         else:
-            gcmd.respond_info("Run Current: %0.2fA Hold Current: %0.2fA"
-                              % (prev_cur, prev_hold_cur))
+            gcmd.respond_info(
+                "Run Current: %0.2fA Hold Current: %0.2fA Home Current: %0.2fA"
+                % (prev_cur, prev_hold_cur, prev_home_cur)
+            )
+
     # Stepper phase tracking
     def _get_phases(self):
         return (256 >> self.fields.get_field("mres")) * 4
+
     def get_phase_offset(self):
         return self.mcu_phase_offset, self._get_phases()
+
     def _query_phase(self):
         field_name = "mscnt"
         if self.fields.lookup_register(field_name, None) is None:
@@ -323,6 +426,7 @@ class TMCCommandHelper:
             field_name = "mstep"
         reg = self.mcu_tmc.get_register(self.fields.lookup_register(field_name))
         return self.fields.get_field(field_name, reg)
+
     def _handle_sync_mcu_pos(self, stepper):
         if stepper.get_name() != self.stepper_name:
             return
@@ -338,12 +442,17 @@ class TMCCommandHelper:
         if not stepper.get_dir_inverted()[0]:
             driver_phase = 1023 - driver_phase
         phases = self._get_phases()
-        phase = int(float(driver_phase) / 1024 * phases + .5) % phases
+        phase = int(float(driver_phase) / 1024 * phases + 0.5) % phases
         moff = (phase - stepper.get_mcu_position()) % phases
         if self.mcu_phase_offset is not None and self.mcu_phase_offset != moff:
-            logging.warning("Stepper %s phase change (was %d now %d)",
-                            self.stepper_name, self.mcu_phase_offset, moff)
+            logging.warning(
+                "Stepper %s phase change (was %d now %d)",
+                self.stepper_name,
+                self.mcu_phase_offset,
+                moff,
+            )
         self.mcu_phase_offset = moff
+
     # Stepper enable/disable tracking
     def _do_enable(self, print_time):
         try:
@@ -361,12 +470,15 @@ class TMCCommandHelper:
             with gcode.get_mutex():
                 if self.mcu_phase_offset is not None:
                     return
-                logging.info("Pausing toolhead to calculate %s phase offset",
-                             self.stepper_name)
-                self.printer.lookup_object('toolhead').wait_moves()
+                logging.info(
+                    "Pausing toolhead to calculate %s phase offset",
+                    self.stepper_name,
+                )
+                self.printer.lookup_object("toolhead").wait_moves()
                 self._handle_sync_mcu_pos(self.stepper)
         except self.printer.command_error as e:
             self.printer.invoke_shutdown(str(e))
+
     def _do_disable(self, print_time):
         try:
             if self.toff is not None:
@@ -376,18 +488,29 @@ class TMCCommandHelper:
             self.echeck_helper.stop_checks()
         except self.printer.command_error as e:
             self.printer.invoke_shutdown(str(e))
+
     def _handle_mcu_identify(self):
         # Lookup stepper object
         force_move = self.printer.lookup_object("force_move")
         self.stepper = force_move.lookup_stepper(self.stepper_name)
+        self.stepper.set_tmc_current_helper(self.current_helper)
+
         # Note pulse duration and step_both_edge optimizations available
-        self.stepper.setup_default_pulse_duration(.000000100, True)
+        self.stepper.setup_default_pulse_duration(0.000000100, True)
+
     def _handle_stepper_enable(self, print_time, is_enable):
         if is_enable:
-            cb = (lambda ev: self._do_enable(print_time))
+
+            def cb(ev):
+                return self._do_enable(print_time)
+
         else:
-            cb = (lambda ev: self._do_disable(print_time))
+
+            def cb(ev):
+                return self._do_disable(print_time)
+
         self.printer.get_reactor().register_callback(cb)
+
     def _handle_connect(self):
         # Check if using step on both edges optimization
         pulse_duration, step_both_edge = self.stepper.get_pulse_duration()
@@ -399,37 +522,55 @@ class TMCCommandHelper:
         if not enable_line.has_dedicated_enable():
             self.toff = self.fields.get_field("toff")
             self.fields.set_field("toff", 0)
-            logging.info("Enabling TMC virtual enable for '%s'",
-                         self.stepper_name)
+            logging.info(
+                "Enabling TMC virtual enable for '%s'", self.stepper_name
+            )
         # Send init
         try:
-            self._init_registers()
+            if self.mcu_tmc.mcu.non_critical_disconnected:
+                logging.info(
+                    "TMC %s failed to init - non_critical_mcu: %s is disconnected!",
+                    self.name,
+                    self.mcu_tmc.mcu.get_name(),
+                )
+            else:
+                self._init_registers()
         except self.printer.command_error as e:
             logging.info("TMC %s failed to init: %s", self.name, str(e))
+
     # get_status information export
     def get_status(self, eventtime=None):
         cpos = None
         if self.stepper is not None and self.mcu_phase_offset is not None:
             cpos = self.stepper.mcu_to_commanded_position(self.mcu_phase_offset)
         current = self.current_helper.get_current()
-        res = {'mcu_phase_offset': self.mcu_phase_offset,
-               'phase_offset_position': cpos,
-               'run_current': current[0],
-               'hold_current': current[1]}
+        res = {
+            "mcu_phase_offset": self.mcu_phase_offset,
+            "phase_offset_position": cpos,
+            "run_current": current[0],
+            "hold_current": current[1],
+        }
         res.update(self.echeck_helper.get_status(eventtime))
         return res
+
     # DUMP_TMC support
     def setup_register_dump(self, read_registers, read_translate=None):
         self.read_registers = read_registers
         self.read_translate = read_translate
         gcode = self.printer.lookup_object("gcode")
-        gcode.register_mux_command("DUMP_TMC", "STEPPER", self.name,
-                                   self.cmd_DUMP_TMC,
-                                   desc=self.cmd_DUMP_TMC_help)
+        gcode.register_mux_command(
+            "DUMP_TMC",
+            "STEPPER",
+            self.name,
+            self.cmd_DUMP_TMC,
+            desc=self.cmd_DUMP_TMC_help,
+        )
+
     cmd_DUMP_TMC_help = "Read and display TMC stepper driver registers"
+
     def cmd_DUMP_TMC(self, gcmd):
         logging.info("DUMP_TMC %s", self.name)
-        reg_name = gcmd.get('REGISTER', None)
+        reg_name = gcmd.get("REGISTER", None)
         if reg_name is not None:
             reg_name = reg_name.upper()
             val = self.fields.registers.get(reg_name)
@@ -461,21 +602,22 @@ class TMCCommandHelper:
 # TMC virtual pins
 ######################################################################
 
+
 # Helper class for "sensorless homing"
 class TMCVirtualPinHelper:
     def __init__(self, config, mcu_tmc):
         self.printer = config.get_printer()
         self.mcu_tmc = mcu_tmc
         self.fields = mcu_tmc.get_fields()
-        if self.fields.lookup_register('diag0_stall') is not None:
-            if config.get('diag0_pin', None) is not None:
-                self.diag_pin = config.get('diag0_pin')
-                self.diag_pin_field = 'diag0_stall'
+        if self.fields.lookup_register("diag0_stall") is not None:
+            if config.get("diag0_pin", None) is not None:
+                self.diag_pin = config.get("diag0_pin")
+                self.diag_pin_field = "diag0_stall"
             else:
-                self.diag_pin = config.get('diag1_pin', None)
-                self.diag_pin_field = 'diag1_stall'
+                self.diag_pin = config.get("diag1_pin", None)
+                self.diag_pin_field = "diag1_stall"
         else:
-            self.diag_pin = config.get('diag_pin', None)
+            self.diag_pin = config.get("diag_pin", None)
             self.diag_pin_field = None
         self.mcu_endstop = None
         self.en_pwm = False
@@ -484,22 +626,26 @@ class TMCVirtualPinHelper:
         name_parts = config.get_name().split()
         ppins = self.printer.lookup_object("pins")
         ppins.register_chip("%s_%s" % (name_parts[0], name_parts[-1]), self)
+
     def setup_pin(self, pin_type, pin_params):
         # Validate pin
-        ppins = self.printer.lookup_object('pins')
-        if pin_type != 'endstop' or pin_params['pin'] != 'virtual_endstop':
+        ppins = self.printer.lookup_object("pins")
+        if pin_type != "endstop" or pin_params["pin"] != "virtual_endstop":
             raise ppins.error("tmc virtual endstop only useful as endstop")
-        if pin_params['invert'] or pin_params['pullup']:
+        if pin_params["invert"] or pin_params["pullup"]:
             raise ppins.error("Can not pullup/invert tmc virtual pin")
         if self.diag_pin is None:
             raise ppins.error("tmc virtual endstop requires diag pin config")
         # Setup for sensorless homing
-        self.printer.register_event_handler("homing:homing_move_begin",
-                                            self.handle_homing_move_begin)
-        self.printer.register_event_handler("homing:homing_move_end",
-                                            self.handle_homing_move_end)
-        self.mcu_endstop = ppins.setup_pin('endstop', self.diag_pin)
+        self.printer.register_event_handler(
+            "homing:homing_move_begin", self.handle_homing_move_begin
+        )
+        self.printer.register_event_handler(
+            "homing:homing_move_end", self.handle_homing_move_end
+        )
+        self.mcu_endstop = ppins.setup_pin("endstop", self.diag_pin)
         return self.mcu_endstop
+
     def handle_homing_move_begin(self, hmove):
         if self.mcu_endstop not in hmove.get_mcu_endstops():
             return
@@ -521,7 +667,7 @@ class TMCVirtualPinHelper:
         # Enable tcoolthrs (if not already)
         self.coolthrs = self.fields.get_field("tcoolthrs")
         if self.coolthrs == 0:
-            tc_val = self.fields.set_field("tcoolthrs", 0xfffff)
+            tc_val = self.fields.set_field("tcoolthrs", 0xFFFFF)
             self.mcu_tmc.set_register("TCOOLTHRS", tc_val)
         # Disable thigh
         reg = self.fields.lookup_register("thigh", None)
@@ -529,6 +675,7 @@ class TMCVirtualPinHelper:
             self.thigh = self.fields.get_field("thigh")
             th_val = self.fields.set_field("thigh", 0)
             self.mcu_tmc.set_register(reg, th_val)
+
     def handle_homing_move_end(self, hmove):
         if self.mcu_endstop not in hmove.get_mcu_endstops():
             return
@@ -556,6 +703,7 @@ class TMCVirtualPinHelper:
 # Config reading helpers
 ######################################################################
 
+
 # Helper to initialize the wave table from config or defaults
 def TMCWaveTableHelper(config, mcu_tmc):
     set_config_field = mcu_tmc.get_fields().set_config_field
@@ -577,6 +725,7 @@ def TMCWaveTableHelper(config, mcu_tmc):
     set_config_field(config, "start_sin", 0)
     set_config_field(config, "start_sin90", 247)
 
+
 # Helper to configure the microstep settings
 def TMCMicrostepHelper(config, mcu_tmc):
     fields = mcu_tmc.get_fields()
@@ -584,17 +733,19 @@ def TMCMicrostepHelper(config, mcu_tmc):
     if not config.has_section(stepper_name):
         raise config.error(
             "Could not find config section '[%s]' required by tmc driver"
-            % (stepper_name,))
+            % (stepper_name,)
+        )
     sconfig = config.getsection(stepper_name)
     steps = {256: 0, 128: 1, 64: 2, 32: 3, 16: 4, 8: 5, 4: 6, 2: 7, 1: 8}
-    mres = sconfig.getchoice('microsteps', steps)
+    mres = sconfig.getchoice("microsteps", steps)
     fields.set_field("mres", mres)
     fields.set_field("intpol", config.getboolean("interpolate", True))
 
+
 # Helper for calculating TSTEP based values from velocity
 def TMCtstepHelper(mcu_tmc, velocity, pstepper=None, config=None):
-    if velocity <= 0.:
-        return 0xfffff
+    if velocity <= 0.0:
+        return 0xFFFFF
     if pstepper is not None:
         step_dist = pstepper.get_step_dist()
     else:
@@ -605,15 +756,16 @@ def TMCtstepHelper(mcu_tmc, velocity, pstepper=None, config=None):
     mres = mcu_tmc.get_fields().get_field("mres")
     step_dist_256 = step_dist / (1 << mres)
     tmc_freq = mcu_tmc.get_tmc_frequency()
-    threshold = int(tmc_freq * step_dist_256 / velocity + .5)
-    return max(0, min(0xfffff, threshold))
+    threshold = int(tmc_freq * step_dist_256 / velocity + 0.5)
+    return max(0, min(0xFFFFF, threshold))
+
 
 # Helper to configure stealthChop-spreadCycle transition velocity
-def TMCStealthchopHelper(config, mcu_tmc):
+def TMCStealthchopHelper(config, mcu_tmc, tmc_freq):
     fields = mcu_tmc.get_fields()
     en_pwm_mode = False
-    velocity = config.getfloat('stealthchop_threshold', None, minval=0.)
-    tpwmthrs = 0xfffff
+    velocity = config.getfloat("stealthchop_threshold", None, minval=0.0)
+    tpwmthrs = 0xFFFFF
 
     if velocity is not None:
         en_pwm_mode = True
@@ -627,20 +779,133 @@ def TMCStealthchopHelper(config, mcu_tmc):
         # TMC2208 uses en_spreadCycle
         fields.set_field("en_spreadcycle", not en_pwm_mode)
 
+
+class BaseTMCCurrentHelper:
+    def __init__(self, config, mcu_tmc, max_current, has_sense_resistor=True):
+        self.printer = config.get_printer()
+        self.name = config.get_name().split()[-1]
+        self.mcu_tmc = mcu_tmc
+        self.fields = mcu_tmc.get_fields()
+
+        if has_sense_resistor:
+            self.sense_resistor = config.getfloat("sense_resistor", above=0.0)
+
+        # config_{run|hold|home}_current
+        # represents an initial value set via config file
+        self.config_run_current = config.getfloat(
+            "run_current", above=0.0, maxval=max_current
+        )
+        self.config_hold_current = config.getfloat(
+            "hold_current", max_current, above=0.0, maxval=max_current
+        )
+        self.config_home_current = config.getfloat(
+            "home_current",
+            self.config_run_current,
+            above=0.0,
+            maxval=max_current,
+        )
+        self.current_change_dwell_time = config.getfloat(
+            "current_change_dwell_time", 0.5, above=0.0
+        )
+
+        # req_{run|hold|home}_current
+        # represents a requested value, which starts with
+        # the configured value but can change during runtime
+        # e.g. SET_TMC_CURRENT
+        self.req_run_current = self.config_run_current
+        self.req_hold_current = self.config_hold_current
+        self.req_home_current = self.config_home_current
+
+        # actual_current represents the actual current set to a stepper
+        # It fluctuates between req_run_current and req_home_current
+        # during homing
+        self.actual_current = self.req_run_current
+
+        self.max_current = max_current
+
+    def needs_home_current_change(self):
+        needs = self.actual_current != self.req_home_current
+        logging.info(f"tmc {self.name}: needs_home_current_change {needs}")
+        return needs
+
+    def needs_run_current_change(self):
+        needs = self.actual_current != self.req_run_current
+        logging.info(f"tmc {self.name}: needs_run_current_change {needs}")
+        return needs
+
+    def needs_hold_current_change(self, hold_current):
+        needs = hold_current != self.req_hold_current
+        logging.info(f"tmc {self.name}: needs_hold_current_change {needs}")
+        return needs
+
+    def set_home_current(self, new_home_current):
+        self.req_home_current = min(self.max_current, new_home_current)
+
+    def set_run_current(self, new_run_current):
+        self.req_run_current = min(self.max_current, new_run_current)
+
+    def set_hold_current(self, new_hold_current):
+        self.req_hold_current = new_hold_current
+
+    def set_actual_current(self, current):
+        self.actual_current = current
+        logging.info(
+            f"tmc {self.name}: set_actual_current() new actual_current: {self.actual_current}"
+        )
+
+    def set_current_for_homing(self, print_time, pre_homing) -> float:
+        if pre_homing and self.needs_home_current_change():
+            self.set_current(
+                self.req_home_current,
+                self.req_hold_current,
+                print_time,
+            )
+            return self.current_change_dwell_time
+        elif not pre_homing and self.needs_run_current_change():
+            self.set_current(
+                self.req_run_current, self.req_hold_current, print_time
+            )
+            return self.current_change_dwell_time
+        return 0.0
+
+    def needs_current_changes(self, run_current, hold_current, force=False):
+        if (
+            run_current == self.actual_current
+            and hold_current == self.req_hold_current
+            and not force
+        ):
+            return False
+        return True
+
+    def apply_current(self, print_time):
+        pass
+
+    def set_current(self, new_current, hold_current, print_time, force=False):
+        if not self.needs_current_changes(new_current, hold_current, force):
+            return
+
+        if self.needs_hold_current_change(hold_current):
+            self.set_hold_current(hold_current)
+
+        self.set_actual_current(new_current)
+        self.apply_current(print_time)
+
+
 # Helper to configure StallGuard and CoolStep minimum velocity
 def TMCVcoolthrsHelper(config, mcu_tmc):
     fields = mcu_tmc.get_fields()
-    velocity = config.getfloat('coolstep_threshold', None, minval=0.)
+    velocity = config.getfloat("coolstep_threshold", None, minval=0.0)
     tcoolthrs = 0
     if velocity is not None:
         tcoolthrs = TMCtstepHelper(mcu_tmc, velocity, config=config)
     fields.set_field("tcoolthrs", tcoolthrs)
 
+
 # Helper to configure StallGuard and CoolStep maximum velocity and
 # SpreadCycle-FullStepping (High velocity) mode threshold.
 def TMCVhighHelper(config, mcu_tmc):
     fields = mcu_tmc.get_fields()
-    velocity = config.getfloat('high_velocity_threshold', None, minval=0.)
+    velocity = config.getfloat("high_velocity_threshold", None, minval=0.0)
     thigh = 0
     if velocity is not None:
         thigh = TMCtstepHelper(mcu_tmc, velocity, config=config)

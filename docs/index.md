@@ -1,21 +1,23 @@
 ---
 hide:
   - toc
-title: Welcome
+title: Kalico Documentation
 ---
 
-![](img/klipper-logo.png){ .center-image }
+# Welcome to the Kalico documentation!
 
-The Klipper firmware controls 3d-Printers. It combines the power of a
-general purpose computer with one or more micro-controllers. See the
-[features document](https://www.klipper3d.org/Features.html) for more
-information on why you should use the Klipper software.
+![](logo/kalico-big.png){ .nobg .center-image .main-logo }
 
-Start by [installing Klipper software](https://www.klipper3d.org/Installation.html).
+Kalico is a community-maintained fork of the Klipper 3D-Printer firmware. 
+It combines the power of a general purpose computer with one or more 
+micro-controllers. See the [features](Features.md) document for more 
+information on why you should use Kalico.
 
-Klipper software is Free Software. Read the
-[documentation](https://www.klipper3d.org/Overview.html), see the
-[license](COPYING), or
-[download](https://github.com/Klipper3d/Klipper) the software. We
-depend on the generous support from our
-[sponsors](https://www.klipper3d.org/Sponsors.html).
+To begin using Kalico start by [installing](Installation.md) it. If you 
+consider migrating from Klipper to Kalico, please read our dedicated
+[migration guide](Migrating_from_Klipper.md).
+
+Kalico is Free Software. Read the [documentation](Overview.md) or
+view [the Kalico code on GitHub](https://github.com/KalicoCrew/kalico).
+
+We depend on the generous support from our [sponsors](Sponsors.md).

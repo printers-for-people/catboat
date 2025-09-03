@@ -10,12 +10,12 @@ import argparse
 import os
 import traceback
 import logging
-KLIPPER_DIR = os.path.abspath(os.path.join(
-    os.path.dirname(__file__), "../"))
-sys.path.append(os.path.join(KLIPPER_DIR, "klippy"))
-import reactor
-import serialhdl
-import clocksync
+import pathlib
+
+sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
+
+from klippy import clocksync, serialhdl, reactor
+
 
 ###########################################################
 #
@@ -23,19 +23,24 @@ import clocksync
 #
 ###########################################################
 
+
 def output_line(msg):
     sys.stdout.write("%s\n" % (msg,))
     sys.stdout.flush()
+
 
 def output(msg):
     sys.stdout.write("%s" % (msg,))
     sys.stdout.flush()
 
-DUMP_CMD="debug_read order=%d addr=%d"
-DUMP_RESP="debug_result"
+
+DUMP_CMD = "debug_read order=%d addr=%d"
+DUMP_RESP = "debug_result"
+
 
 class MCUDumpError(Exception):
     pass
+
 
 class MCUDump:
     def __init__(self, args):
@@ -66,7 +71,7 @@ class MCUDump:
         self.reactor.register_callback(self._do_serial_connect)
         curtime = self.reactor.monotonic()
         while True:
-            curtime = self.reactor.pause(curtime + 1.)
+            curtime = self.reactor.pause(curtime + 1.0)
             output(".")
             if self.connect_completion.test():
                 self.connected = self.connect_completion.wait()
@@ -83,17 +88,16 @@ class MCUDump:
         output_line("Frequency: %s\n" % (freq,))
 
     def _do_serial_connect(self, eventtime):
-        endtime = eventtime + 60.
+        endtime = eventtime + 60.0
         while True:
             try:
                 if self.canbus_iface is not None:
                     self._serial.connect_canbus(
                         self.device, self.canbus_nodeid, self.canbus_iface
                     )
-                elif (
-                    self.device.startswith("/dev/rpmsg_") or
-                    self.device.startswith("/tmp/")
-                ):
+                elif self.device.startswith(
+                    "/dev/rpmsg_"
+                ) or self.device.startswith("/tmp/"):
                     self._serial.connect_pipe(self.device)
                 else:
                     self._serial.connect_uart(self.device, self.baud)
@@ -105,7 +109,7 @@ class MCUDump:
                     return
                 output("Connection Error, retrying..")
                 self._serial.disconnect()
-                self.reactor.pause(curtime + 2.)
+                self.reactor.pause(curtime + 2.0)
             else:
                 break
         self.connect_completion.complete(True)
@@ -123,8 +127,7 @@ class MCUDump:
         bsize = 1 << order
         # Query data from mcu
         output_line(
-            "Reading %d bytes from flash, start address 0x%x\n"
-            % (count, addr)
+            "Reading %d bytes from flash, start address 0x%x\n" % (count, addr)
         )
         output("[")
         bytes_read = last_reported_pct = 0
@@ -133,9 +136,9 @@ class MCUDump:
             caddr = addr + (i << order)
             cmd = DUMP_CMD % (order, caddr)
             params = self._serial.send_with_response(cmd, DUMP_RESP)
-            vals.append(params['val'])
+            vals.append(params["val"])
             bytes_read += bsize
-            pct = int(bytes_read / float(count) * 100 + .5)
+            pct = int(bytes_read / float(count) * 100 + 0.5)
             diff = (pct - last_reported_pct) // 2
             if diff:
                 last_reported_pct = pct
@@ -145,7 +148,7 @@ class MCUDump:
         data = bytearray()
         for val in vals:
             for b in range(bsize):
-                data.append((val >> (8 * b)) & 0xff)
+                data.append((val >> (8 * b)) & 0xFF)
         data = data[:count]
         with open(self.output_file, "wb") as f:
             f.write(data)
@@ -164,29 +167,51 @@ class MCUDump:
             self.disconnect()
             self.reactor.finalize()
 
+
 def main():
     parser = argparse.ArgumentParser(description="MCU Flash Dump Utility")
 
     parser.add_argument(
-        "-b", "--baud", metavar="<baud rate>", type=int,
-        default=250000, help="Baud Rate")
+        "-b",
+        "--baud",
+        metavar="<baud rate>",
+        type=int,
+        default=250000,
+        help="Baud Rate",
+    )
     parser.add_argument(
-        "-c", "--canbus_iface", metavar="<canbus iface>", default=None,
-         help="Use CAN bus interface; <device> is the chip UUID")
+        "-c",
+        "--canbus_iface",
+        metavar="<canbus iface>",
+        default=None,
+        help="Use CAN bus interface; <device> is the chip UUID",
+    )
     parser.add_argument(
-        "-i", "--canbus_nodeid", metavar="<canbus nodeid>", type=int,
-        default=64, help="The CAN nodeid to use (default 64)")
+        "-i",
+        "--canbus_nodeid",
+        metavar="<canbus nodeid>",
+        type=int,
+        default=64,
+        help="The CAN nodeid to use (default 64)",
+    )
     parser.add_argument(
-        "-s", "--read_start", metavar="<read start>", default="0x0",
-        help="Flash address to start reading")
+        "-s",
+        "--read_start",
+        metavar="<read start>",
+        default="0x0",
+        help="Flash address to start reading",
+    )
     parser.add_argument(
-        "-l", "--read_length", metavar="<read length>", default="0x400",
-        help="Number of bytes to read")
+        "-l",
+        "--read_length",
+        metavar="<read length>",
+        default="0x400",
+        help="Number of bytes to read",
+    )
+    parser.add_argument("device", metavar="<device>", help="Device Serial Port")
     parser.add_argument(
-        "device", metavar="<device>", help="Device Serial Port")
-    parser.add_argument(
-        "outfile", metavar="<outfile>",
-        help="Path to output file")
+        "outfile", metavar="<outfile>", help="Path to output file"
+    )
     args = parser.parse_args()
     logging.basicConfig(level=logging.CRITICAL)
     try:

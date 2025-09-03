@@ -5,13 +5,15 @@
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 import os, sys, logging
-import msgproto
+from . import msgproto
+
 
 def read_dictionary(filename):
-    dfile = open(filename, 'rb')
+    dfile = open(filename, "rb")
     dictionary = dfile.read()
     dfile.close()
     return dictionary
+
 
 def main():
     dict_filename, data_filename = sys.argv[1:]
@@ -21,7 +23,7 @@ def main():
     mp = msgproto.MessageParser()
     mp.process_identify(dictionary, decompress=False)
 
-    f = open(data_filename, 'rb')
+    f = open(data_filename, "rb")
     fd = f.fileno()
     data = bytearray()
     while 1:
@@ -38,8 +40,9 @@ def main():
                 data = data[-l:]
                 continue
             msgs = mp.dump(data[:l])
-            sys.stdout.write('\n'.join(msgs[1:]) + '\n')
+            sys.stdout.write("\n".join(msgs[1:]) + "\n")
             data = data[l:]
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

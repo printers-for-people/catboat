@@ -6,34 +6,38 @@
 # This file may be distributed under the terms of the GNU GPLv3 license.
 import sys, os, re, subprocess, optparse, time, fcntl, termios, struct
 
+
 class error(Exception):
     pass
+
 
 # Attempt to enter bootloader via 1200 baud request
 def enter_bootloader(device):
     try:
-        f = open(device, 'rb')
+        f = open(device, "rb")
         fd = f.fileno()
-        fcntl.ioctl(fd, termios.TIOCMBIS, struct.pack('I', termios.TIOCM_DTR))
+        fcntl.ioctl(fd, termios.TIOCMBIS, struct.pack("I", termios.TIOCM_DTR))
         t = termios.tcgetattr(fd)
         t[4] = t[5] = termios.B1200
         sys.stderr.write("Entering bootloader on %s\n" % (device,))
         termios.tcsetattr(fd, termios.TCSANOW, t)
-        fcntl.ioctl(fd, termios.TIOCMBIC, struct.pack('I', termios.TIOCM_DTR))
+        fcntl.ioctl(fd, termios.TIOCMBIC, struct.pack("I", termios.TIOCM_DTR))
         f.close()
     except (IOError, OSError) as e:
         pass
 
+
 # Translate a serial device name to a stable serial name in /dev/serial/by-path/
 def translate_serial_to_tty(device):
     ttyname = os.path.realpath(device)
-    if not os.path.exists('/dev/serial/by-path/'):
+    if not os.path.exists("/dev/serial/by-path/"):
         raise error("Unable to find serial 'by-path' folder")
-    for fname in os.listdir('/dev/serial/by-path/'):
-        fname = '/dev/serial/by-path/' + fname
+    for fname in os.listdir("/dev/serial/by-path/"):
+        fname = "/dev/serial/by-path/" + fname
         if os.path.realpath(fname) == ttyname:
             return ttyname, fname
     return ttyname, ttyname
+
 
 # Translate a serial device name to a usb path (suitable for dfu-util)
 def translate_serial_to_usb_path(device):
@@ -50,9 +54,10 @@ def translate_serial_to_usb_path(device):
     devpath = os.path.realpath("/sys/class/tty/%s/device" % (fname,))
     return m.group("path"), devpath
 
+
 # Wait for a given path to appear
 def wait_path(path, alt_path=None):
-    time.sleep(.100)
+    time.sleep(0.100)
     start_alt_path = None
     end_time = time.time() + 4.0
     while 1:
@@ -67,13 +72,16 @@ def wait_path(path, alt_path=None):
                 start_alt_path = cur_time
                 continue
             if cur_time >= start_alt_path + 0.300:
-                sys.stderr.write("Device reconnect on alt path %s\n" % (
-                    alt_path,))
+                sys.stderr.write(
+                    "Device reconnect on alt path %s\n" % (alt_path,)
+                )
                 return alt_path
         if cur_time > end_time:
             return path
 
-CANBOOT_ID ="1d50:6177"
+
+CANBOOT_ID = "1d50:6177"
+
 
 def detect_canboot(devpath):
     usbdir = os.path.dirname(devpath)
@@ -87,9 +95,10 @@ def detect_canboot(devpath):
     usbid = "%s:%s" % (vid, pid)
     return usbid == CANBOOT_ID
 
+
 def call_flashcan(device, binfile):
     try:
-        import serial
+        import serial  # noqa: F401
     except ModuleNotFoundError:
         sys.stderr.write(
             "Python's pyserial module is required to update. Install\n"
@@ -97,26 +106,36 @@ def call_flashcan(device, binfile):
             "   %s -m pip install pyserial\n\n" % (sys.executable,)
         )
         sys.exit(-1)
-    args = [sys.executable, "lib/canboot/flash_can.py", "-d",
-            device, "-f", binfile]
-    sys.stderr.write(" ".join(args) + '\n\n')
+    args = [
+        sys.executable,
+        "lib/canboot/flash_can.py",
+        "-d",
+        device,
+        "-f",
+        binfile,
+    ]
+    sys.stderr.write(" ".join(args) + "\n\n")
     res = subprocess.call(args)
     if res != 0:
         sys.stderr.write("Error running flash_can.py\n")
         sys.exit(-1)
 
+
 def flash_canboot(options, binfile):
     ttyname, pathname = translate_serial_to_tty(options.device)
     call_flashcan(pathname, binfile)
 
+
 # Flash via a call to bossac
-def flash_bossac(device, binfile, extra_flags=[]):
+def flash_bossac(device, binfile, extra_flags=None):
+    if extra_flags is None:
+        extra_flags = []
     ttyname, pathname = translate_serial_to_tty(device)
     enter_bootloader(pathname)
     pathname = wait_path(pathname, ttyname)
     baseargs = ["lib/bossac/bin/bossac", "-U", "-p", pathname]
     args = baseargs + extra_flags + ["-w", binfile, "-v"]
-    sys.stderr.write(" ".join(args) + '\n\n')
+    sys.stderr.write(" ".join(args) + "\n\n")
     res = subprocess.call(args)
     if res != 0:
         raise error("Error running bossac")
@@ -130,21 +149,25 @@ def flash_bossac(device, binfile, extra_flags=[]):
         except subprocess.CalledProcessError as e:
             pass
 
+
 # Invoke the dfu-util program
 def call_dfuutil(flags, binfile, sudo):
     args = ["dfu-util"] + flags + ["-D", binfile]
     if sudo:
         args.insert(0, "sudo")
-    sys.stderr.write(" ".join(args) + '\n\n')
+    sys.stderr.write(" ".join(args) + "\n\n")
     res = subprocess.call(args)
     if res != 0:
         raise error("Error running dfu-util")
 
+
 # Flash via a call to dfu-util
-def flash_dfuutil(device, binfile, extra_flags=[], sudo=True):
+def flash_dfuutil(device, binfile, extra_flags=None, sudo=True):
+    if extra_flags is None:
+        extra_flags = []
     hexfmt_r = re.compile(r"^[a-fA-F0-9]{4}:[a-fA-F0-9]{4}$")
     if hexfmt_r.match(device.strip()):
-        call_dfuutil(["-d", ","+device.strip()] + extra_flags, binfile, sudo)
+        call_dfuutil(["-d", "," + device.strip()] + extra_flags, binfile, sudo)
         return
     ttyname, serbypath = translate_serial_to_tty(device)
     buspath, devpath = translate_serial_to_usb_path(device)
@@ -155,14 +178,16 @@ def flash_dfuutil(device, binfile, extra_flags=[], sudo=True):
     else:
         call_dfuutil(["-p", buspath] + extra_flags, binfile, sudo)
 
+
 def call_hidflash(binfile, sudo):
     args = ["lib/hidflash/hid-flash", binfile]
     if sudo:
         args.insert(0, "sudo")
-    sys.stderr.write(" ".join(args) + '\n\n')
+    sys.stderr.write(" ".join(args) + "\n\n")
     res = subprocess.call(args)
     if res != 0:
         raise error("Error running hid-flash")
+
 
 # Flash via call to hid-flash
 def flash_hidflash(device, binfile, sudo=True):
@@ -179,6 +204,7 @@ def flash_hidflash(device, binfile, sudo=True):
     else:
         call_hidflash(binfile, sudo)
 
+
 # Call Klipper modified "picoboot"
 def call_picoboot(bus, addr, binfile, sudo):
     args = ["lib/rp2040_flash/rp2040_flash", binfile]
@@ -186,10 +212,11 @@ def call_picoboot(bus, addr, binfile, sudo):
         args.extend([bus, addr])
     if sudo:
         args.insert(0, "sudo")
-    sys.stderr.write(" ".join(args) + '\n\n')
+    sys.stderr.write(" ".join(args) + "\n\n")
     res = subprocess.call(args)
     if res != 0:
         raise error("Error running rp2040_flash")
+
 
 # Flash via Klipper modified "picoboot"
 def flash_picoboot(device, binfile, sudo):
@@ -213,30 +240,37 @@ def flash_picoboot(device, binfile, sudo):
 # Device specific helpers
 ######################################################################
 
+
 def flash_atsam3(options, binfile):
     try:
         flash_bossac(options.device, binfile, ["-e", "-b"])
     except error as e:
-        sys.stderr.write("Failed to flash to %s: %s\n" % (
-            options.device, str(e)))
+        sys.stderr.write(
+            "Failed to flash to %s: %s\n" % (options.device, str(e))
+        )
         sys.exit(-1)
+
 
 def flash_atsam4(options, binfile):
     try:
         flash_bossac(options.device, binfile, ["-e"])
     except error as e:
-        sys.stderr.write("Failed to flash to %s: %s\n" % (
-            options.device, str(e)))
+        sys.stderr.write(
+            "Failed to flash to %s: %s\n" % (options.device, str(e))
+        )
         sys.exit(-1)
+
 
 def flash_atsamd(options, binfile):
     extra_flags = ["--offset=0x%x" % (options.start,), "-b", "-R"]
     try:
         flash_bossac(options.device, binfile, extra_flags)
     except error as e:
-        sys.stderr.write("Failed to flash to %s: %s\n" % (
-            options.device, str(e)))
+        sys.stderr.write(
+            "Failed to flash to %s: %s\n" % (options.device, str(e))
+        )
         sys.exit(-1)
+
 
 SMOOTHIE_HELP = """
 Failed to flash to %s: %s
@@ -256,12 +290,14 @@ and then restart the Smoothieboard with that SD card.
 
 """
 
+
 def flash_lpc176x(options, binfile):
     try:
         flash_dfuutil(options.device, binfile, [], options.sudo)
     except error as e:
         sys.stderr.write(SMOOTHIE_HELP % (options.device, str(e)))
         sys.exit(-1)
+
 
 STM32F1_HELP = """
 Failed to flash to %s: %s
@@ -277,17 +313,21 @@ If attempting to flash via 3.3V serial, then use:
 
 """
 
+
 def flash_stm32f1(options, binfile):
     try:
         if options.start == 0x8000800:
             flash_hidflash(options.device, binfile, options.sudo)
         else:
-            flash_dfuutil(options.device, binfile, ["-R", "-a", "2"],
-                          options.sudo)
+            flash_dfuutil(
+                options.device, binfile, ["-R", "-a", "2"], options.sudo
+            )
     except error as e:
-        sys.stderr.write(STM32F1_HELP % (
-            options.device, str(e), options.device))
+        sys.stderr.write(
+            STM32F1_HELP % (options.device, str(e), options.device)
+        )
         sys.exit(-1)
+
 
 STM32F4_HELP = """
 Failed to flash to %s: %s
@@ -303,18 +343,25 @@ If attempting to flash via 3.3V serial, then use:
 
 """
 
+
 def flash_stm32f4(options, binfile):
     start = "0x%x:leave" % (options.start,)
     try:
         if options.start == 0x8004000:
             flash_hidflash(options.device, binfile, options.sudo)
         else:
-            flash_dfuutil(options.device, binfile,
-                          ["-R", "-a", "0", "-s", start], options.sudo)
+            flash_dfuutil(
+                options.device,
+                binfile,
+                ["-R", "-a", "0", "-s", start],
+                options.sudo,
+            )
     except error as e:
-        sys.stderr.write(STM32F4_HELP % (
-            options.device, str(e), options.device))
+        sys.stderr.write(
+            STM32F4_HELP % (options.device, str(e), options.device)
+        )
         sys.exit(-1)
+
 
 RP2040_HELP = """
 Failed to flash to %s: %s
@@ -329,9 +376,10 @@ device as a usb drive, and copy klipper.uf2 to the device.
 
 """
 
+
 def flash_rp2040(options, binfile):
     rawdev = "2e8a:0003"
-    if options.mcutype == 'rp2350':
+    if options.mcutype == "rp2350":
         rawdev = "2e8a:000f"
     try:
         if options.device.lower() == rawdev:
@@ -342,15 +390,25 @@ def flash_rp2040(options, binfile):
         sys.stderr.write(RP2040_HELP % (options.device, str(e), rawdev))
         sys.exit(-1)
 
+
 MCUTYPES = {
-    'sam3': flash_atsam3, 'sam4': flash_atsam4, 'same70': flash_atsam4,
-    'samd': flash_atsamd, 'same5': flash_atsamd,
-    'lpc176': flash_lpc176x, 'stm32f103': flash_stm32f1,
-    'stm32f4': flash_stm32f4, 'stm32f042': flash_stm32f4,
-    'stm32f070': flash_stm32f4, 'stm32f072': flash_stm32f4,
-    'stm32g0b1': flash_stm32f4, 'stm32f7': flash_stm32f4,
-    'stm32h7': flash_stm32f4, 'stm32l4': flash_stm32f4,
-    'stm32g4': flash_stm32f4, 'rp2': flash_rp2040,
+    "sam3": flash_atsam3,
+    "sam4": flash_atsam4,
+    "same70": flash_atsam4,
+    "samd": flash_atsamd,
+    "same5": flash_atsamd,
+    "lpc176": flash_lpc176x,
+    "stm32f103": flash_stm32f1,
+    "stm32f4": flash_stm32f4,
+    "stm32f042": flash_stm32f4,
+    "stm32f070": flash_stm32f4,
+    "stm32f072": flash_stm32f4,
+    "stm32g0b1": flash_stm32f4,
+    "stm32f7": flash_stm32f4,
+    "stm32h7": flash_stm32f4,
+    "stm32l4": flash_stm32f4,
+    "stm32g4": flash_stm32f4,
+    "rp2": flash_rp2040,
 }
 
 
@@ -358,17 +416,34 @@ MCUTYPES = {
 # Startup
 ######################################################################
 
+
 def main():
     usage = "%prog [options] -t <type> -d <device> <klipper.bin>"
     opts = optparse.OptionParser(usage)
-    opts.add_option("-t", "--type", type="string", dest="mcutype",
-                    help="micro-controller type")
-    opts.add_option("-d", "--device", type="string", dest="device",
-                    help="serial port device")
-    opts.add_option("-s", "--start", type="int", dest="start",
-                    help="start address in flash")
-    opts.add_option("--no-sudo", action="store_false", dest="sudo",
-                    default=True, help="do not run sudo")
+    opts.add_option(
+        "-t",
+        "--type",
+        type="string",
+        dest="mcutype",
+        help="micro-controller type",
+    )
+    opts.add_option(
+        "-d",
+        "--device",
+        type="string",
+        dest="device",
+        help="serial port device",
+    )
+    opts.add_option(
+        "-s", "--start", type="int", dest="start", help="start address in flash"
+    )
+    opts.add_option(
+        "--no-sudo",
+        action="store_false",
+        dest="sudo",
+        default=True,
+        help="do not run sudo",
+    )
     options, args = opts.parse_args()
     if len(args) != 1:
         opts.error("Incorrect number of arguments")
@@ -379,12 +454,14 @@ def main():
                 flash_func = func
                 break
     if flash_func is None:
-        opts.error("USB flashing is not supported for MCU '%s'"
-                   % (options.mcutype,))
+        opts.error(
+            "USB flashing is not supported for MCU '%s'" % (options.mcutype,)
+        )
     if not options.device:
         sys.stderr.write("\nPlease specify FLASH_DEVICE\n\n")
         sys.exit(-1)
     flash_func(options, args[0])
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

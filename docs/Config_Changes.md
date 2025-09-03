@@ -2,23 +2,25 @@
 
 This document covers recent software changes to the config file that
 are not backwards compatible. It is a good idea to review this
-document when upgrading the Klipper software.
+document when upgrading the Kalico software.
 
 All dates in this document are approximate.
 
 ## Changes
 
-20250131: Option `VARIABLE=<name>` in `SAVE_VARIABLE` requires lowercase
-value. For example, `extruder` instead of mixedcase `Extruder` or
-uppercase `EXTRUDER`. Using any uppercase letter will raise an error.
+20250426: Option `CHIPS=<chip_name>` in `TEST_RESONANCES` and
+`SHAPER_CALIBRATE` requires specifying the full name(s) of the accel
+chip(s). For example, `adxl345 rpi` instead of short name - `rpi`.
 
-20241203: The resonance test has been changed to include slow sweeping
-moves. This change requires that testing point(s) have some clearance
-in X/Y plane (+/- 30 mm from the test point should suffice when using
-the default settings). The new test should generally produce more
-accurate and reliable test results. However, if required, the previous
-test behavior can be restored by adding options `sweeping_period: 0` and
-`accel_per_hz: 75` to the `[resonance_tester]` config section.
+20250207: The `driver_CS` parameter has been added to tmc5160. Previously the
+CS value was nearly always set to 31. Now, the default is 31, but may be changed.
+
+20250121: The `second_homing_speed` default value in the stepper config section
+is now set to `homing_speed` if sensorless homing is enabled.
+
+20250107: The `rref` parameter for tmc2240 is now mandatory with no default value.
+
+20241202: The `sense_resistor` parameter is now mandatory with no default value.
 
 20241201: In some cases Klipper may have ignored leading characters or
 spaces in a traditional G-Code command. For example, "99M123" may have
@@ -26,22 +28,20 @@ been interpreted as "M123" and "M 321" may have been interpreted as
 "M321". Klipper will now report these cases with an "Unknown command"
 warning.
 
-20241112: Option `CHIPS=<chip_name>` in `TEST_RESONANCES` and
-`SHAPER_CALIBRATE` requires specifying the full name(s) of the accel
-chip(s). For example, `adxl345 rpi` instead of short name - `rpi`.
+20241125: The `off_below` parameter in fans config section is
+deprecated. It will be removed in the near future. Use
+[`min_power`](./Config_Reference.md#fans)
+instead. The `printer[fan object].speed` status will be replaced by
+`printer[fan object].value` and `printer[fan object].power`.
 
-20240912: `SET_PIN`, `SET_SERVO`, `SET_FAN_SPEED`, `M106`, and `M107`
-commands are now collated. Previously, if many updates to the same
-object were issued faster than the minimum scheduling time (typically
-100ms) then actual updates could be queued far into the future. Now if
-many updates are issued in rapid succession then it is possible that
-only the latest request will be applied. If the previous behavior is
-requried then consider adding explicit `G4` delay commands between
-updates.
+20241223: The `CLEAR_RETRACTION` command does not reset parameters to
+default config values anymore, a [`RESET_RETRACTION`](./G-Codes.md#reset_retraction)
+command was added to achieve this. Automatic resetting behavior on
+events was removed.
 
-20240912: Support for `maximum_mcu_duration` and `static_value`
-parameters in `[output_pin]` config sections have been removed. These
-options have been deprecated since 20240123.
+20240430: The `adc_ignore_limits` parameter in the `[danger_options]`
+config section has been renamed to `temp_ignore_limits` and it now
+covers all possible temperature sensors.
 
 20240415: The `on_error_gcode` parameter in the `[virtual_sdcard]`
 config section now has a default. If this parameter is not specified
@@ -64,6 +64,12 @@ and using them in the interim may result in subtly different behavior.
 extruder `shared_heater` config option has been removed (deprecated on
 20220210). The bed_mesh `relative_reference_index` option has been
 removed (deprecated on 20230619).
+
+20240128: `printer.kinematics` now accepts `limited_cartesian` and
+`limited_cartesian` and `limited_corexy` that enables `max_{x,y}_accel` and
+`max_{x,y}_velocity` (only for `limited_cartesian`). In the future, this
+functionality may be moved into the original kinematics module (as optional
+settings).
 
 20240123: The output_pin SET_PIN CYCLE_TIME parameter has been
 removed. Use the new
@@ -102,6 +108,19 @@ for more details).
 20230810: The flash-sdcard.sh script now supports both variants of the
 Bigtreetech SKR-3, STM32H743 and STM32H723. For this, the original tag
 of btt-skr-3 now has changed to be either btt-skr-3-h743 or btt-skr-3-h723.
+
+20230801: The setting `fan.off_bellow` has been changed to `fan.min_power`.
+However, this change will not affect users who do not utilize this setting.
+With this update, a PWM scaling has been introduced between `min_power` and
+`max_power`. Fans that require a higher `min_power` will now have access to
+their full "safe" power curve. By properly setting `min_power`, any fan
+(such as CPAP) should engage even at `M106 S1`. It's recommended to review
+your slicer/macros to adjust your fan speeds. Your previously designated 20%
+fan speed may no longer represent your lowest fan setting but will now
+correspond to an actual 20% fan speed.
+If you had previously set `max_power` to anything below 1.0 (default),
+it is advisable to recalibrate `min_power` and `kick_start_time` again, with
+the settings `min_power: 0` and `max_power: 1`.
 
 20230729: The exported status for `dual_carriage` is changed. Instead of
 exporting `mode` and `active_carriage`, the individual modes for each
@@ -288,7 +307,7 @@ removed in the near future.  Most users can replace a
 `default_parameter_NAME: VALUE` config option with a line like the
 following in the start of the macro: ` {% set NAME =
 params.NAME|default(VALUE)|float %}`.  See the [Command Templates
-document](Command_Templates.md#macro-parameters) for examples.
+document](Command_Templates.md) for examples.
 
 20210430: The SET_VELOCITY_LIMIT (and M204) command may now set a
 velocity, acceleration, and square_corner_velocity larger than the
