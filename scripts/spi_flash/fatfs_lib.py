@@ -5,13 +5,14 @@
 # This file may be distributed under the terms of the GNU GPLv3 license.
 import os
 import sys
-KLIPPER_DIR = os.path.abspath(os.path.join(
-    os.path.dirname(__file__), "../../"))
-sys.path.append(os.path.join(KLIPPER_DIR, "klippy"))
-import chelper
+import pathlib
+
+KLIPPER_DIR = pathlib.Path(__file__).parent.parent.parent
+sys.path.insert(0, str(KLIPPER_DIR))
+from klippy import chelper  # noqa: E402
 
 DEST_LIB = "fatfs.so"
-FATFS_DIR = os.path.join(KLIPPER_DIR, "lib/fatfs")
+FATFS_DIR = str(KLIPPER_DIR / "lib" / "fatfs")
 FATFS_SRC = ["ff.c", "ffsystem.c", "ffunicode.c"]
 SPI_FLASH_SRC = ["fatfs_api.c"]
 FATFS_HEADERS = ["diskio.h", "ff.h", "ffconf.h"]
@@ -57,6 +58,7 @@ FATFS_CDEFS = """
 fatfs_ffi_main = None
 fatfs_ffi_lib = None
 
+
 def check_fatfs_build(printfunc=lambda o: o):
     printfunc("Checking FatFS CFFI Build...\n")
     ffi_main, ffi_lib = chelper.get_ffi()
@@ -66,19 +68,23 @@ def check_fatfs_build(printfunc=lambda o: o):
     ofiles = chelper.get_abs_files(FATFS_DIR, FATFS_HEADERS)
     ofiles.extend(chelper.get_abs_files(srcdir, SPI_FLASH_HEADERS))
     destlib = os.path.join(srcdir, DEST_LIB)
-    if chelper.check_build_code(srcfiles+ofiles+[__file__], destlib):
+    if chelper.check_build_code(srcfiles + ofiles + [__file__], destlib):
         if chelper.check_gcc_option(chelper.SSE_FLAGS):
-            cmd = "%s %s %s" % (chelper.GCC_CMD, chelper.SSE_FLAGS,
-                                chelper.COMPILE_ARGS)
+            cmd = "%s %s %s" % (
+                chelper.GCC_CMD,
+                chelper.SSE_FLAGS,
+                chelper.COMPILE_ARGS,
+            )
         else:
             cmd = "%s %s" % (chelper.GCC_CMD, chelper.COMPILE_ARGS)
         printfunc("Building FatFS shared library...")
-        chelper.do_build_code(cmd % (destlib, ' '.join(srcfiles)))
+        chelper.do_build_code(cmd % (destlib, " ".join(srcfiles)))
         printfunc("Done\n")
     global fatfs_ffi_main, fatfs_ffi_lib
     ffi_main.cdef(FATFS_CDEFS)
     fatfs_ffi_lib = ffi_main.dlopen(destlib)
     fatfs_ffi_main = ffi_main
+
 
 def get_fatfs_ffi():
     global fatfs_ffi_main, fatfs_ffi_lib

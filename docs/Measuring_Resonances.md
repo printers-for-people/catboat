@@ -1,35 +1,32 @@
 # Measuring Resonances
 
-Klipper has built-in support for the ADXL345, MPU-9250, LIS2DW and LIS3DH compatible
+Kalico has built-in support for the ADXL345, MPU-9250 and LIS2DW compatible
 accelerometers which can be used to measure resonance frequencies of the printer
 for different axes, and auto-tune [input shapers](Resonance_Compensation.md) to
 compensate for resonances. Note that using accelerometers requires some
-soldering and crimping. The ADXL345 can be connected to the SPI interface
+soldering and crimping. The ADXL345/LIS2DW can be connected to the SPI interface
 of a Raspberry Pi or MCU board (it needs to be reasonably fast). The MPU family can
 be connected to the I2C interface of a Raspberry Pi directly, or to an I2C
-interface of an MCU board that supports 400kbit/s *fast mode* in Klipper. The
-LIS2DW and LIS3DH can be connected to either SPI or I2C with the same considerations
-as above.
+interface of an MCU board that supports 400kbit/s *fast mode* in Kalico.
 
 When sourcing accelerometers, be aware that there are a variety of different PCB
 board designs and different clones of them. If it is going to be connected to a
 5V printer MCU ensure it has a voltage regulator and level shifters.
 
-For ADXL345s, make sure that the board supports SPI mode (a small number of
+For ADXL345s/LIS2DWs, make sure that the board supports SPI mode (a small number of
 boards appear to be hard-configured for I2C by pulling SDO to GND).
 
-For MPU-9250/MPU-9255/MPU-6515/MPU-6050/MPU-6500s and LIS2DW/LIS3DH there are also
-a variety of board designs and clones with different I2C pull-up resistors which
-will need supplementing.
+For MPU-9250/MPU-9255/MPU-6515/MPU-6050/MPU-6500/ICM20948s and LIS2DW/LIS3DH there
+are also a variety of board designs and clones with different I2C pull-up resistors
+which will need supplementing.
 
-## MCUs with Klipper I2C *fast-mode* Support
+## MCUs with Kalico I2C *fast-mode* Support
 
 | MCU Family | MCU(s) Tested | MCU(s) with Support |
 |:--:|:--|:--|
 | Raspberry Pi | 3B+, Pico | 3A, 3A+, 3B, 4 |
 | AVR ATmega | ATmega328p | ATmega32u4, ATmega128, ATmega168, ATmega328, ATmega644p, ATmega1280, ATmega1284, ATmega2560 |
 | AVR AT90 | - | AT90usb646, AT90usb1286 |
-| SAMD | SAMC21G18 | SAMC21G18, SAMD21G18, SAMD21E18, SAMD21J18, SAMD21E15, SAMD51G19, SAMD51J19, SAMD51N19, SAMD51P20, SAME51J19, SAME51N19, SAME54P20 |
 
 ## Installation instructions
 
@@ -96,7 +93,7 @@ Fritzing wiring diagrams for some of the ADXL345 boards:
 
 You may connect the ADXL345 to your Raspberry Pi Pico and then connect the
 Pico to your Raspberry Pi via USB. This makes it easy to reuse the
-accelerometer on other Klipper devices, as you can connect via USB instead
+accelerometer on other Kalico devices, as you can connect via USB instead
 of GPIO. The Pico does not have much processing power, so make sure it is
 only running the accelerometer and not performing any other duties.
 
@@ -136,7 +133,7 @@ GND+SCL
 
 Note that unlike a cable shield, any GND(s) should be connected at both ends.
 
-#### MPU-9250/MPU-9255/MPU-6515/MPU-6050/MPU-6500
+#### MPU-9250/MPU-9255/MPU-6515/MPU-6050/MPU-6500/ICM20948
 
 These accelerometers have been tested to work over I2C on the RPi, RP2040 (Pico)
 and AVR at 400kbit/s (*fast mode*). Some MPU accelerometer modules include
@@ -210,19 +207,17 @@ software dependencies not installed by default. First, run on your Raspberry Pi
 the following commands:
 ```
 sudo apt update
-sudo apt install python3-numpy python3-matplotlib libatlas-base-dev libopenblas-dev
+sudo apt install libatlas-base-dev libopenblas-dev
 ```
 
-Next, in order to install NumPy in the Klipper environment, run the command:
+Next, in order to install NumPy in the Kalico environment, run the command:
 ```
-~/klippy-env/bin/pip install -v "numpy<1.26"
+~/klippy-env/bin/pip install -v numpy matplotlib
 ```
 Note that, depending on the performance of the CPU, it may take *a lot*
 of time, up to 10-20 minutes. Be patient and wait for the completion of
 the installation. On some occasions, if the board has too little RAM
-the installation may fail and you will need to enable swap. Also note
-the forced version, due to newer versions of NumPY having requirements
-that may not be satisfied in some klipper python environments.
+the installation may fail and you will need to enable swap.
 
 Once installed please check that no errors show from the command:
 ```
@@ -234,7 +229,7 @@ The correct output should simply be a new line.
 
 First, check and follow the instructions in the
 [RPi Microcontroller document](RPi_microcontroller.md) to setup the
-"linux mcu" on the Raspberry Pi. This will configure a second Klipper
+"linux mcu" on the Raspberry Pi. This will configure a second Kalico
 instance that runs on your Pi.
 
 Make sure the Linux SPI driver is enabled by running `sudo
@@ -314,9 +309,9 @@ you'll also want to modify your `printer.cfg` file to include this:
 [include adxl.cfg] # Comment this out when you disconnect the accelerometer
 ```
 
-Restart Klipper via the `RESTART` command.
+Restart Kalico via the `RESTART` command.
 
-#### Configure LIS2DW series over SPI
+#### Configure LIS2DW series
 
 ```
 [mcu lis]
@@ -355,6 +350,7 @@ accel_chip: mpu9250
 probe_points:
     100, 100, 20  # an example
 ```
+If you are using the ICM20948, replace instances of "mpu9250" with "icm20948".
 
 #### Configure MPU-9520 Compatibles With Pico
 
@@ -377,6 +373,7 @@ probe_points:
 [static_digital_output pico_3V3pwm] # Improve power stability
 pins: pico:gpio23
 ```
+If you are using the ICM20948, replace instances of "mpu9250" with "icm20948".
 
 #### Configure MPU-9520 Compatibles with AVR
 
@@ -395,8 +392,9 @@ accel_chip: mpu9250
 probe_points:
     100, 100, 20  # an example
 ```
+If you are using the ICM20948, replace instances of "mpu9250" with "icm20948".
 
-Restart Klipper via the `RESTART` command.
+Restart Kalico via the `RESTART` command.
 
 ## Measuring the resonances
 
@@ -467,8 +465,8 @@ if you desire to average the results. Averaging results can be useful, for
 example, if resonance tests were done at multiple test points. Delete the extra
 CSV files if you do not desire to average them.
 ```
-~/klipper/scripts/calibrate_shaper.py /tmp/resonances_x_*.csv -o /tmp/shaper_calibrate_x.png
-~/klipper/scripts/calibrate_shaper.py /tmp/resonances_y_*.csv -o /tmp/shaper_calibrate_y.png
+~/klippy-env/bin/python ~/klipper/scripts/calibrate_shaper.py /tmp/resonances_x_*.csv -o /tmp/shaper_calibrate_x.png
+~/klippy-env/bin/python ~/klipper/scripts/calibrate_shaper.py /tmp/resonances_y_*.csv -o /tmp/shaper_calibrate_y.png
 ```
 This script will generate the charts `/tmp/shaper_calibrate_x.png` and
 `/tmp/shaper_calibrate_y.png` with frequency responses. You will also get the
@@ -507,7 +505,7 @@ charts: peaks in the power spectral density on the charts correspond to
 the resonance frequencies of the printer.
 
 Note that alternatively you can run the input shaper auto-calibration
-from Klipper [directly](#input-shaper-auto-calibration), which can be
+from Kalico [directly](#input-shaper-auto-calibration), which can be
 convenient, for example, for the input shaper
 [re-calibration](#input-shaper-re-calibration).
 
@@ -597,7 +595,7 @@ Note that the reported `smoothing` values are some abstract projected values.
 These values can be used to compare different configurations: the higher the
 value, the more smoothing a shaper will create. However, these smoothing scores
 do not represent any real measure of smoothing, because the actual smoothing
-depends on [`max_accel`](#selecting-max-accel) and `square_corner_velocity`
+depends on [`max_accel`](#selecting-max_accel) and `square_corner_velocity`
 parameters. Therefore, you should print some test prints to see how much
 smoothing exactly a chosen configuration creates.
 
@@ -605,7 +603,7 @@ In the example above the suggested shaper parameters are not bad, but what if
 you want to get less smoothing on the X axis? You can try to limit the maximum
 shaper smoothing using the following command:
 ```
-~/klipper/scripts/calibrate_shaper.py /tmp/resonances_x_*.csv -o /tmp/shaper_calibrate_x.png --max_smoothing=0.2
+~/klippy-env/bin/python ~/klipper/scripts/calibrate_shaper.py /tmp/resonances_x_*.csv -o /tmp/shaper_calibrate_x.png --max_smoothing=0.2
 ```
 which limits the smoothing to 0.2 score. Now you can get the following result:
 
@@ -648,7 +646,7 @@ probe_points: ...
 max_smoothing: 0.25  # an example
 ```
 Then, if you [rerun](#input-shaper-re-calibration) the input shaper auto-tuning
-using `SHAPER_CALIBRATE` Klipper command in the future, it will use the stored
+using `SHAPER_CALIBRATE` Kalico command in the future, it will use the stored
 `max_smoothing` value as a reference.
 
 ### Selecting max_accel
@@ -683,7 +681,7 @@ it from its default value 5.0, and this is the value used by default by the
 `calibrate_shaper.py` script. If you did change it though, you should inform
 the script about it by passing `--square_corner_velocity=...` parameter, e.g.
 ```
-~/klipper/scripts/calibrate_shaper.py /tmp/resonances_x_*.csv -o /tmp/shaper_calibrate_x.png --square_corner_velocity=10.0
+~/klippy-env/bin/python ~/klipper/scripts/calibrate_shaper.py /tmp/resonances_x_*.csv -o /tmp/shaper_calibrate_x.png --square_corner_velocity=10.0
 ```
 so that it can calculate the maximum acceleration recommendations correctly.
 Note that the `SHAPER_CALIBRATE` command already takes the configured
@@ -693,24 +691,6 @@ to specify it explicitly.
 If you are doing a shaper re-calibration and the reported smoothing for the
 suggested shaper configuration is almost the same as what you got during the
 previous calibration, this step can be skipped.
-
-### Unreliable measurements of resonance frequencies
-
-Sometimes the resonance measurements can produce bogus results, leading to
-the incorrect suggestions for the input shapers. This can be caused by a
-variety of reasons, including running fans on the toolhead, incorrect
-position or non-rigid mounting of the accelerometer, or mechanical problems
-such as loose belts or binding or bumpy axis. Keep in mind that all fans
-should be disabled for resonance testing, especially the noisy ones, and
-that the accelerometer should be rigidly mounted on the corresponding
-moving part (e.g. on the bed itself for the bed slinger, or on the extruder
-of the printer itself and not the carriage, and some people get better
-results by mounting the accelerometer on the nozzle itself). As for
-mechanical problems, the user should inspect if there is any fault that
-can be fixed with a moving axis (e.g. linear guide rails cleaned up and
-lubricated and V-slot wheels tension adjusted correctly). If none of that
-helps, a user may try the other shapers from the produced list besides the
-one recommended by default.
 
 ### Testing custom axes
 
@@ -725,7 +705,7 @@ TEST_RESONANCES AXIS=1,-1 OUTPUT=raw_data
 ```
 and use `graph_accelerometer.py` to process the generated files, e.g.
 ```
-~/klipper/scripts/graph_accelerometer.py -c /tmp/raw_data_axis*.csv -o /tmp/resonances.png
+~/klippy-env/bin/python ~/klipper/scripts/graph_accelerometer.py -c /tmp/raw_data_axis*.csv -o /tmp/resonances.png
 ```
 which will generate `/tmp/resonances.png` comparing the resonances.
 
@@ -738,7 +718,7 @@ TEST_RESONANCES AXIS=0.866025404,-0.5 OUTPUT=raw_data
 ```
 and then use the same command
 ```
-~/klipper/scripts/graph_accelerometer.py -c /tmp/raw_data_axis*.csv -o /tmp/resonances.png
+~/klippy-env/bin/python ~/klipper/scripts/graph_accelerometer.py -c /tmp/raw_data_axis*.csv -o /tmp/resonances.png
 ```
 to generate `/tmp/resonances.png` comparing the resonances.
 
@@ -746,7 +726,7 @@ to generate `/tmp/resonances.png` comparing the resonances.
 
 Besides manually choosing the appropriate parameters for the input shaper
 feature, it is also possible to run the auto-tuning for the input shaper
-directly from Klipper. Run the following command via Octoprint terminal:
+directly from Kalico. Run the following command via Octoprint terminal:
 ```
 SHAPER_CALIBRATE
 ```
@@ -772,7 +752,7 @@ To avoid too much smoothing with '3hump_ei', suggested max_accel <= 2500 mm/sec^
 Recommended shaper_type_y = mzv, shaper_freq_y = 36.8 Hz
 ```
 If you agree with the suggested parameters, you can execute `SAVE_CONFIG`
-now to save them and restart the Klipper. Note that this will not update
+now to save them and restart the Kalico. Note that this will not update
 `max_accel` value in `[printer]` section. You should update it manually
 following the considerations in [Selecting max_accel](#selecting-max_accel)
 section.
@@ -860,7 +840,7 @@ and not resonances\*.csv or calibration_data\*.csv files.
 
 For example,
 ```
-~/klipper/scripts/graph_accelerometer.py /tmp/raw_data_x_*.csv -o /tmp/resonances_x.png -c -a z
+~/klippy-env/bin/python ~/klipper/scripts/graph_accelerometer.py /tmp/raw_data_x_*.csv -o /tmp/resonances_x.png -c -a z
 ```
 will plot the comparison of several `/tmp/raw_data_x_*.csv` files for Z axis to
 `/tmp/resonances_x.png` file.

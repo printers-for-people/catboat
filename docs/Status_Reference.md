@@ -1,14 +1,14 @@
 # Status reference
 
 This document is a reference of printer status information available
-in Klipper [macros](Command_Templates.md),
+in Kalico [macros](Command_Templates.md),
 [display fields](Config_Reference.md#display), and via the
 [API Server](API_Server.md).
 
 The fields in this document are subject to change - if using an
 attribute be sure to review the
 [Config Changes document](Config_Changes.md) when upgrading the
-Klipper software.
+Kalico software.
 
 ## angle
 
@@ -39,6 +39,15 @@ the following strings: "adjust", "fine".
 - `current_screw`: The index for the current screw being adjusted.
 - `accepted_screws`: The number of accepted screws.
 
+## belay
+
+The following information is available in
+[belay some_name](Config_Reference.md#belay) objects:
+- `printer["belay <config_name>"].last_state`: Returns True if the belay's
+  sensor is in a triggered state (indicating its slider is compressed).
+- `printer["belay <config_name>"].enabled`: Returns True if the belay is
+  currently enabled.
+
 ## canbus_stats
 
 The following information is available in the `canbus_stats
@@ -68,7 +77,7 @@ The following information is available in the `configfile` object
   (or default value) during the last software start or restart. (Any
   settings changed at run-time will not be reflected here.)
 - `config.<section>.<option>`: Returns the given raw config file
-  setting as read by Klipper during the last software start or
+  setting as read by Kalico during the last software start or
   restart. (Any settings changed at run-time will not be reflected
   here.) All values are returned as strings.
 - `save_config_pending`: Returns true if there are updates that a
@@ -80,6 +89,16 @@ The following information is available in the `configfile` object
   field (both strings). Additional fields may be available depending
   on the type of warning.
 
+## control_mpc
+
+The following information is available in the `extruder.control_stats` object
+(this object is automatically available if control type for [extruder](Config_Reference.md#extruder) config section is set to [mpc](MPC.md):
+- `loss_ambient`: The current/last ambient loss rate.
+- `loss_filament`: The current/last filament loss rate.
+- `filament_temp`: The current filament temperature.
+- `filament_heat_capacity`: The current specific heat capacity of filament in J/g/K.
+- `filament_density`: The current filament density in g/mm^3.
+
 ## display_status
 
 The following information is available in the `display_status` object
@@ -88,6 +107,16 @@ The following information is available in the `display_status` object
 - `progress`: The progress value of the last `M73` G-Code command (or
   `virtual_sdcard.progress` if no recent `M73` received).
 - `message`: The message contained in the last `M117` G-Code command.
+
+## dockable_probe
+
+The following information is available in the
+[dockable_probe](Config_Reference.md#dockable_probe):
+- `last_status`: The UNKNOWN/ATTACHED/DOCKED status of the probbe as
+  reported during the last QUERY_DOCKABLE_PROBE command. Note, if
+  this is used in a macro, due to the order of template expansion,
+  the QUERY_DOCKABLE_PROBE command must be run prior to the macro
+  containing this reference.
 
 ## endstop_phase
 
@@ -158,9 +187,12 @@ The following information is available in
 [heater_fan some_name](Config_Reference.md#heater_fan) and
 [controller_fan some_name](Config_Reference.md#controller_fan)
 objects:
-- `speed`: The fan speed as a float between 0.0 and 1.0.
+- `value`: The fan speed value as a float between 0.0 and 1.0.
+- `power`: The fan power as a float between 0|`min_power` and 1.0|`max_power`.
 - `rpm`: The measured fan speed in rotations per minute if the fan has
   a tachometer_pin defined.
+deprecated objects (for UI compatibility only):
+- `speed`: The fan speed as a float between 0.0 and `max_power`.
 
 ## filament_switch_sensor
 
@@ -184,16 +216,33 @@ objects:
 
 The following information is available in the
 [firmware_retraction](Config_Reference.md#firmware_retraction) object:
-- `retract_length`, `retract_speed`, `unretract_extra_length`,
-  `unretract_speed`: The current settings for the firmware_retraction
-  module. These settings may differ from the config file if a
-  `SET_RETRACTION` command alters them.
+- `retract_length`: Current setting for length of filament retract moves.
+- `retract_speed`: Current setting for speed of filament retract moves.
+- `unretract_extra_length`: Current setting for additional length of filament
+  unretract moves (positive values will result in filament extrusion, while
+  negative values up to 1 mm (2.41 mm3 for 1.75 mm filament) will result in
+  lagging extrusion of filament).
+- `unretract_speed`: Current setting for speed of unretract moves of filament.
+- `unretract_length`: Unretract move length (sum of retract and extra unretract
+   length).
+- `z_hop_height`: Current setting for the height of nozzle lifting move (Z-Hop).
+- Above settings for the firmware_retraction module may differ from the
+  config file if a `SET_RETRACTION` command altered them. Additional information
+  available is as follows.
+- `retract_state`: Returns 'True' if filament is retracted.
+- `zhop_state`: Returns 'True' if a zhop is currently applied.
 
 ## gcode
 
 The following information is available in the `gcode` object:
 - `commands`: Returns a list of all currently available commands. For each
   command, if a help string is defined it will also be provided.
+
+## gcode_button
+
+The following information is available in
+[gcode_button some_name](Config_Reference.md#gcode_button) objects:
+- `state`: The current button state returned as "PRESSED" or "RELEASED"
 
 ## gcode_button
 
@@ -242,6 +291,8 @@ The following information is available in the `gcode_move` object
 The following information is available in the
 [hall_filament_width_sensor](Config_Reference.md#hall_filament_width_sensor)
 object:
+- all items from
+  [filament_switch_sensor](Status_Reference.md#filament_switch_sensor)
 - `is_active`: Returns True if the sensor is currently active.
 - `Diameter`: The last reading from the sensor in mm.
 - `Raw`: The last raw ADC reading from the sensor.
@@ -303,6 +354,17 @@ The following information is available for each `[led led_name]`,
   chain could be accessed at
   `printer["neopixel <config_name>"].color_data[1][2]`.
 
+## load_cell
+
+The following information is available for each `[load_cell name]`:
+- 'is_calibrated': True/False is the load cell calibrated
+- 'counts_per_gram': The number of raw sensor counts that equals 1 gram of force
+- 'reference_tare_counts': The reference number of raw sensor counts for 0 force
+- 'tare_counts': The current number of raw sensor counts for 0 force
+- 'force_g': The force in grams, averaged over the last polling period.
+- 'min_force_g': The minimum force in grams, over the last polling period.
+- 'max_force_g': The maximum force in grams, over the last polling period.
+
 ## manual_probe
 
 The following information is available in the
@@ -319,7 +381,7 @@ understands it).
 The following information is available in
 [mcu](Config_Reference.md#mcu) and
 [mcu some_name](Config_Reference.md#mcu-my_extra_mcu) objects:
-- `mcu_version`: The Klipper code version reported by the
+- `mcu_version`: The Kalico code version reported by the
   micro-controller.
 - `mcu_build_versions`: Information on the build tools used to
   generate the micro-controller code (as reported by the
@@ -329,6 +391,20 @@ The following information is available in
   micro-controller architectures and with each code revision.
 - `last_stats.<statistics_name>`: Statistics information on the
   micro-controller connection.
+- `non_critical_disconnected`: True/False if the mcu is disconnected.
+
+## mixing_extruder
+
+The following information is available in the `mixing_extruder` object
+(this object is automatically available if any stepper config section
+is defined):
+
+The following information is available in
+[mixing_extruder](Config_Reference.md#mixing_extruder) objects:
+- `<mixing>`: The current mixing weights in percent for the configured
+  extruders separated by comma
+- `<ticks>`: A comma separated list of the current mcu position for the
+  configured extruders
 
 ## motion_report
 
@@ -447,6 +523,12 @@ The following information is available in
 - `printer["servo <config_name>"].value`: The last setting of the PWM
   pin (a value between 0.0 and 1.0) associated with the servo.
 
+## skew_correction.py
+
+The following information is available in the `skew_correction` object (this
+object is available if any skew_correction is defined):
+- `current_profile_name`: Returns the name of the currently loaded SKEW_PROFILE.
+
 ## stepper_enable
 
 The following information is available in the `stepper_enable` object (this
@@ -464,9 +546,9 @@ The following information is available in the `system_stats` object
 
 The following information is available in
 
-[bme280 config_section_name](Config_Reference.md#bmp280bme280bme680-temperature-sensor),
+[bme280 config_section_name](Config_Reference.md#bmp180bmp280bme280bmp388bme680-temperature-sensor),
 [htu21d config_section_name](Config_Reference.md#htu21d-sensor),
-[sht3x config_section_name](Config_Reference.md#sht31-sensor),
+[sht3x config_section_name](Config_Reference.md#sht3x-sensor),
 [lm75 config_section_name](Config_Reference.md#lm75-temperature-sensor),
 [temperature_host config_section_name](Config_Reference.md#host-temperature-sensor)
 and
@@ -491,7 +573,7 @@ The following information is available in
 objects:
 - `temperature`: The last read temperature from the sensor.
 - `measured_min_temp`, `measured_max_temp`: The lowest and highest
-  temperature seen by the sensor since the Klipper host software was
+  temperature seen by the sensor since the Kalico host software was
   last restarted.
 
 ## tmc drivers
@@ -551,6 +633,30 @@ on a cartesian, hybrid_corexy or hybrid_corexz robot
 - `carriage_1`: The mode of the carriage 1. Possible values are:
   "INACTIVE", "PRIMARY", "COPY", and "MIRROR".
 
+## tools_calibrate
+
+The following information is available in the
+[tools_calibrate](Config_Reference.md#tools_calibrate) object:
+- `sensor_location`: Once calibrated, the location of the sensor
+- `last_result`: The last tool calibration result
+- `calibration_probe_inactive`: Status of the calibration probe as of
+  the last `TOOL_CALIBRATE_QUERY_PROBE`
+
+## trad_rack
+
+The following informatin is available in the
+[trad_rack](Config_Reference.md#trad_rack) object:
+- `curr_lane`: The lane the selector is currently positioned at.
+- `active_lane`: The lane currently loaded in the toolhead.
+- `next_lane`: The next lane to load to the toolhead if a toolchange
+  is in progress.
+- `next_tool`: The next tool to load to the toolhead if a toolchange
+  is in progress (if a tool number was specified for the toolchange).
+- `tool_map`: An array of integers listing the assigned tool for each
+  lane. The tool number for a specified lane can be accessed with
+  `tool_map[<lane index>]`.
+- `selector_homed`: Whether or not the selector axis is homed.
+
 ## virtual_sdcard
 
 The following information is available in the
@@ -566,10 +672,10 @@ The following information is available in the
 
 The following information is available in the `webhooks` object (this
 object is always available):
-- `state`: Returns a string indicating the current Klipper
+- `state`: Returns a string indicating the current Kalico
   state. Possible values are: "ready", "startup", "shutdown", "error".
 - `state_message`: A human readable string giving additional context
-  on the current Klipper state.
+  on the current Kalico state.
 
 ## z_thermal_adjust
 

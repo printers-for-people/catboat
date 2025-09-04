@@ -29,6 +29,8 @@ DECL_ENUMERATION("spi_bus", "spi1_gpio12_gpio15_gpio14", 6);
 DECL_CONSTANT_STR("BUS_PINS_spi1_gpio12_gpio15_gpio14", "gpio12,gpio15,gpio14");
 DECL_ENUMERATION("spi_bus", "spi1_gpio24_gpio27_gpio26", 7);
 DECL_CONSTANT_STR("BUS_PINS_spi1_gpio24_gpio27_gpio26", "gpio24,gpio27,gpio26");
+DECL_ENUMERATION("spi_bus", "spi1_gpio12_gpio11_gpio10", 8);
+DECL_CONSTANT_STR("BUS_PINS_spi1_gpio12_gpio11_gpio10", "gpio12,gpio11,gpio10");
 
 //Deprecated "spi0a" style mappings
 DECL_ENUMERATION("spi_bus", "spi0a", 0);
@@ -39,6 +41,8 @@ DECL_ENUMERATION("spi_bus", "spi0c", 2);
 DECL_CONSTANT_STR("BUS_PINS_spi0c", "gpio16,gpio19,gpio18");
 DECL_ENUMERATION("spi_bus", "spi0d", 3);
 DECL_CONSTANT_STR("BUS_PINS_spi0d", "gpio20,gpio23,gpio22");
+DECL_ENUMERATION("spi_bus", "spi0e", 4);
+DECL_CONSTANT_STR("BUS_PINS_spi0e", "gpio4,gpio3,gpio2");
 
 DECL_ENUMERATION("spi_bus", "spi1a", 5);
 DECL_CONSTANT_STR("BUS_PINS_spi1a", "gpio8,gpio11,gpio10");
@@ -63,6 +67,7 @@ static const struct spi_info spi_bus[] = {
     {spi1_hw, 8,  11, 10, RESETS_RESET_SPI1_BITS},
     {spi1_hw, 12, 15, 14, RESETS_RESET_SPI1_BITS},
     {spi1_hw, 24, 27, 26, RESETS_RESET_SPI1_BITS},
+    {spi1_hw, 12, 11, 10, RESETS_RESET_SPI1_BITS},
 };
 
 struct spi_config

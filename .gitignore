@@ -1,6 +1,25 @@
+# development
 out
 *.so
 *.pyc
+__pycache__/
 .config
 .config.old
 klippy/.version
+.history/
+.DS_Store
+ci_build/
+ci_cache/
+_test_.*
+klippy/plugins/*
+!klippy/plugins/__init__.py
+.vscode
+.idea/*
+
+# docs
+site/
+.env/
+.venv/
+env/
+venv/
+mkdocs-env/

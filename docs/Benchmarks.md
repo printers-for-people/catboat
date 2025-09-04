@@ -1,10 +1,10 @@
 # Benchmarks
 
-This document describes Klipper benchmarks.
+This document describes Kalico benchmarks.
 
 ## Micro-controller Benchmarks
 
-This section describes the mechanism used to generate the Klipper
+This section describes the mechanism used to generate the Kalico
 micro-controller step rate benchmarks.
 
 The primary goal of the benchmarks is to provide a consistent
@@ -15,7 +15,7 @@ platforms.
 
 The step rate benchmark is designed to find the maximum stepping rate
 that the hardware and software can reach. This benchmark stepping rate
-is not achievable in day-to-day use as Klipper needs to perform other
+is not achievable in day-to-day use as Kalico needs to perform other
 tasks (eg, mcu/host communication, temperature reading, endstop
 checking) in any real-world usage.
 
@@ -365,6 +365,7 @@ config_stepper oid=2 step_pin=PC28 dir_pin=PA4 invert_step=-1 step_pulse_ticks=0
 finalize_config crc=0
 ```
 
+
 The test was last run on commit `34e9ea55` with gcc version
 `arm-none-eabi-gcc (NixOS 10.3-2021.10) 10.3.1` on a SAME70Q20B
 micro-controller.
@@ -407,14 +408,14 @@ config_stepper oid=2 step_pin=gpio27 dir_pin=gpio5 invert_step=-1 step_pulse_tic
 finalize_config crc=0
 ```
 
-The test was last run on commit `f6718291` with gcc version
+The test was last run on commit `14c105b8` with gcc version
 `arm-none-eabi-gcc (Fedora 14.1.0-1.fc40) 14.1.0` on Raspberry Pi
 Pico and Pico 2 boards.
 
 | rp2040 (*)           | ticks |
 | -------------------- | ----- |
-| 1 stepper            | 5     |
-| 3 stepper            | 22    |
+| 1 stepper            | 3     |
+| 3 stepper            | 14    |
 
 | rp2350               | ticks |
 | -------------------- | ----- |
@@ -422,9 +423,9 @@ Pico and Pico 2 boards.
 | 3 stepper            | 169   |
 
 (*) Note that the reported rp2040 ticks are relative to a 12Mhz
-scheduling timer and do not correspond to its 125Mhz internal ARM
+scheduling timer and do not correspond to its 200Mhz internal ARM
 processing rate. It is expected that 5 scheduling ticks corresponds to
-~47 ARM core cycles and 22 scheduling ticks corresponds to ~224 ARM
+~42 ARM core cycles and 14 scheduling ticks corresponds to ~225 ARM
 core cycles.
 
 ### Linux MCU step rate benchmark

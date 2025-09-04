@@ -1,19 +1,21 @@
 # Configuration reference
 
-This document is a reference for options available in the Klipper
+This document is a reference for options available in the Kalico
 config file.
+
+Sections and options are marked with an ⚠️ to denote configurations that are changed from stock Klipper.
 
 The descriptions in this document are formatted so that it is possible
 to cut-and-paste them into a printer config file. See the
 [installation document](Installation.md) for information on setting up
-Klipper and choosing an initial config file.
+Kalico and choosing an initial config file.
 
 ## Micro-controller configuration
 
 ### Format of micro-controller pin names
 
 Many config options require the name of a micro-controller pin.
-Klipper uses the hardware names for these pins - for example `PA4`.
+Kalico uses the hardware names for these pins - for example `PA4`.
 
 Pin names may be preceded by `!` to indicate that a reverse polarity
 should be used (eg, trigger on low instead of high).
@@ -55,9 +57,13 @@ serial:
 #   is useful on Raspberry Pi boards with micro-controllers powered
 #   over USB - it briefly disables power to all USB ports to
 #   accomplish a micro-controller reset. The 'command' method involves
-#   sending a Klipper command to the micro-controller so that it can
+#   sending a Kalico command to the micro-controller so that it can
 #   reset itself. The default is 'arduino' if the micro-controller
 #   communicates over a serial port, 'command' otherwise.
+#is_non_critical: False
+#   Setting this to True will allow the mcu to be disconnected and
+#   reconnected at will without errors. Helpful for USB-accelerometer boards
+#   and USB-probes
 ```
 
 ### [mcu my_extra_mcu]
@@ -72,6 +78,109 @@ pins such as "extra_mcu:ar9" may then be used elsewhere in the config
 ```
 [mcu my_extra_mcu]
 # See the "mcu" section for configuration parameters.
+```
+
+## ⚠️ Danger Options
+
+A collection of Kalico-specific system options
+
+```
+[danger_options]
+#error_on_unused_config_options: True
+#   If an unused config option or section should cause an error
+#   if False, will warn but allow Kalico to still run.
+#   The default is True.
+#allow_plugin_override: False
+#   Allows modules in `plugins` to override modules of the same name in `extras`
+#   The default is False.
+#single_mcu_trsync_timeout: 0.25
+#   The timeout (in seconds) for MCU synchronization during the homing process when
+#   a single MCUs is in use. The default is 0.25
+#multi_mcu_trsync_timeout: 0.025
+#   The timeout (in seconds) for MCU synchronization during the homing process when
+#   multiple MCUs are in use. The default is 0.025
+#homing_elapsed_distance_tolerance: 0.5
+#   Tolerance (in mm) for distance moved in the second homing. Ensures the
+#   second homing distance closely matches the `min_home_dist` when using
+#   sensorless homing. The default is 0.5mm.
+#temp_ignore_limits: False
+#   When set to true, this parameter ignores the min_value and max_value
+#   limits for temperature sensors. It prevents shutdowns due to
+#   'ADC out of range' and similar errors by allowing readings outside the
+#   specified range without triggering a shutdown. The default is False.
+#autosave_includes: False
+#   When set to true, SAVE_CONFIG will recursively read [include ...] blocks
+#   for conflicts to autosave data. Any configurations updated will be backed
+#   up to configs/config_backups.
+#bgflush_extra_time: 0.250
+#   This allows to set extra flush time (in seconds). Under certain conditions,
+#   a low value will result in an error if message is not get flushed, a high value
+#   (0.250) will result in homing/probing latency. The default is 0.250
+#homing_start_delay: 0.001
+#   How long to dwell before beginning a drip move for homing
+#endstop_sample_time: 0.000015
+#   How often the MCU should sample the endstop state
+#endstop_sample_count: 4
+#   How many times we should check the endstop state when homing
+#   Unless your endstop is noisy and unreliable, you should be able to lower this to 1
+
+
+# Logging options:
+
+#minimal_logging: False
+#   Set all log parameters log options to False. The default is False.
+#log_statistics: True
+#   If statistics should be logged
+#   (helpful for keeping the log clean during development)
+#   The default is True.
+#log_config_file_at_startup: True
+#   If the config file should be logged at startup
+#   The default is True.
+#log_bed_mesh_at_startup: True
+#   If the bed mesh should be logged at startup
+#   (helpful for keeping the log clean during development)
+#   The default is True.
+#log_velocity_limit_changes: True
+#   If changes to velocity limits should be logged. If False, velocity limits will only
+#   be logged at rollover. Some slicers emit very frequent SET_VELOCITY_LIMIT commands
+#   The default is True
+#log_pressure_advance_changes: True
+#   If changes to pressure advance should be logged. If false, pressure advance data
+#   will only be logged at rollover.
+#   The default is True.
+#log_shutdown_info: True
+#   If we should log detailed crash info when an exception occurs
+#   Most of it is overly-verbose and fluff and we still get a stack trace
+#   for normal exceptions, so setting to False can help save time while developing
+#   The default is True.
+#log_serial_reader_warnings: True
+#log_startup_info: True
+#log_webhook_method_register_messages: False
+```
+
+## ⚠️ Configuration references
+
+In your configuration, you can reference other values to share
+configuration between multiple sections. References take the form of
+`${option}` to copy a value in the current section, or
+`${section.option}` to look up a value elsewhere in your configuration. Note,
+that constants must always be lower case.
+
+Optionally, a `[constants]` section can be used specifically to store
+these values. Unused constants will display a warning. However, `[constants]`
+will display an error if none of the constants are used.
+
+```
+[constants]
+run_current_ab:  1.0
+i_am_not_used: True  # Will show "Constant 'i_am_not_used' is unused"
+
+[tmc5160 stepper_x]
+run_current: ${constants.run_current_ab}
+
+[tmc5160 stepper_y]
+run_current: ${tmc5160 stepper_x.run_current}
+#   Nested references work, but are not advised
 ```
 
 ## Common kinematic settings
@@ -196,23 +305,37 @@ position_max:
 #homing_speed: 5.0
 #   Maximum velocity (in mm/s) of the stepper when homing. The default
 #   is 5mm/s.
+#homing_accel:
+#   Maximum accel (in mm/s) of the stepper when homing. The default
+#   is to use the max accel configured in the [printer]'s object.
 #homing_retract_dist: 5.0
 #   Distance to backoff (in mm) before homing a second time during
-#   homing. Set this to zero to disable the second home. The default
+#   homing. If `use_sensorless_homing` is false, this setting can be set
+#   to zero to disable the second home. If `use_sensorless_homing` is
+#   true, this setting can be > 0 to backoff after homing. The default
 #   is 5mm.
 #homing_retract_speed:
 #   Speed to use on the retract move after homing in case this should
 #   be different from the homing speed, which is the default for this
 #   parameter
+#min_home_dist:
+#   Minimum distance (in mm) for toolhead before sensorless homing. If closer
+#   than `min_home_dist` to endstop, it moves away to this distance, then homes.
+#   If further, it directly homes and retracts to `homing_retract_dist`.
+#   The default is equal to `homing_retract_dist`.
 #second_homing_speed:
 #   Velocity (in mm/s) of the stepper when performing the second home.
-#   The default is homing_speed/2.
+#   The default is homing_speed/2. If `use_sensorless_homing` is
+#   true, the default is homing_speed.
 #homing_positive_dir:
 #   If true, homing will cause the stepper to move in a positive
 #   direction (away from zero); if false, home towards zero. It is
 #   better to use the default than to specify this parameter. The
 #   default is true if position_endstop is near position_max and false
 #   if near position_min.
+#use_sensorless_homing:
+#   If true, disables the second home action if homing_retract_dist > 0.
+#   The default is true if endstop_pin is configured to use virtual_endstop
 ```
 
 ### Cartesian Kinematics
@@ -249,6 +372,72 @@ max_z_accel:
 # the Z axis in a cartesian robot.
 [stepper_z]
 ```
+
+### ⚠️ Cartesian Kinematics with limits for X and Y axes
+
+Behaves exactly the as cartesian kinematics, but allows to set a velocity and
+acceleration limit for X and Y axis. This also makes command
+[`SET_KINEMATICS_LIMIT`](./G-Codes.md#set_kinematics_limit) available to sets these limits at runtime.
+
+
+```
+[printer]
+kinematics: limited_cartesian
+max_x_velocity:
+#   This sets the maximum velocity (in mm/s) of movement along the x
+#   axis. This setting can be used to restrict the maximum speed of
+#   the x stepper motor. The default is to use max_velocity for
+#   max_x_velocity.
+max_y_velocity:
+#   This sets the maximum velocity (in mm/s) of movement along the y
+#   axis. This setting can be used to restrict the maximum speed of
+#   the y stepper motor. The default is to use max_velocity for
+#   max_x_velocity.
+max_z_velocity:
+#   See cartesian above.
+max_velocity:
+#   In order to get maximum velocity gains on diagonals, this should be equal or
+#   greater than the hypotenuse (sqrt(x*x + y*y)) of max_x_velocity and
+#   max_y_velocity.
+max_x_accel:
+#   This sets the maximum acceleration (in mm/s^2) of movement along
+#   the x axis. It limits the acceleration of the x stepper motor. The
+#   default is to use max_accel for max_x_accel.
+max_y_accel:
+#   This sets the maximum acceleration (in mm/s^2) of movement along
+#   the y axis. It limits the acceleration of the y stepper motor. The
+#   default is to use max_accel for max_y_accel.
+max_z_accel:
+# See cartesian above.
+max_accel:
+# See cartesian above.
+scale_xy_accel: False
+#   When true, scales the XY limits by the current tool head acceleration.
+#   The factor is: slicer accel / hypot(max_x_accel, max_y_accel).
+#   See below.
+```
+
+If scale_xy_accel is `False`, the acceleration set by `max_accel`, M204 or
+SET_VELOCITY_LIMIT, acts as a third limit. In that case, this module doesn't
+apply limitations on moves having an acceleration lower than `max_x_accel`` and
+`max_y_accel`. When scale_xy_accel is `True`, `max_x_accel` and `max_y_accel`
+are scaled by the ratio of the dynamically set acceleration and the hypotenuse
+of max_x_accel and `max_y_accel`, as reported from `SET_KINEMATICS_LIMIT`. This
+implies that the actual acceleration will always depend on the direction. For
+example, these settings:
+
+```
+[printer]
+max_x_accel: 12000
+max_y_accel: 9000
+scale_xy_accel: true
+```
+
+`SET_KINEMATICS_LIMIT` will report a maximum acceleration of 15000 mm/s^2 on 37°
+diagonals. If the slicer emit `M204 S3000` (3000 mm/s^2 accel). On these 37° and
+143° diagonals, the toolhead will accelerate at 3000 mm/s^2. On the X axis, the
+acceleration will be  12000 * 3000 / 15000 = 2400 mm/s^2, and 18000 mm/s^2 for
+pure Y moves.
 
 ### Linear Delta Kinematics
 
@@ -334,6 +523,9 @@ radius:
 #horizontal_move_z: 5
 #   The height (in mm) that the head should be commanded to move to
 #   just prior to starting a probe operation. The default is 5.
+#use_probe_xy_offsets: False
+#   If True, apply the `[probe]` XY offsets to the probed positions. The
+#   default is False.
 ```
 
 ### Deltesian Kinematics
@@ -343,7 +535,7 @@ example deltesian kinematics config file.
 
 Only parameters specific to deltesian printers are described here - see
 [common kinematic settings](#common-kinematic-settings) for available
- parameters.
+parameters.
 
 ```
 [printer]
@@ -446,6 +638,37 @@ max_z_accel:
 [stepper_z]
 ```
 
+### ⚠️ CoreXY Kinematics with limits for X and Y axes
+
+Behaves exactly the as CoreXY kinematics, but allows to set a acceleration limit
+for X and Y axis.
+
+There is no velocity limits for X and Y, since on a CoreXY the pull-out velocity
+are identical on both axes.
+
+
+```
+[printer]
+kinematics: limited_corexy
+max_z_velocity:
+#   See CoreXY above.
+max_x_accel:
+#   This sets the maximum acceleration (in mm/s^2) of movement along
+#   the x axis. It limits the acceleration of the x stepper motor. The
+#   default is to use max_accel for max_x_accel.
+max_y_accel:
+#   This sets the maximum acceleration (in mm/s^2) of movement along
+#   the y axis. It limits the acceleration of the y stepper motor. The
+#   default is to use max_accel for max_y_accel.
+max_z_accel:
+# See CoreXY above.
+max_accel:
+# See CoreXY above..
+scale_xy_accel:
+#   When True, scales the XY limits by the current tool head acceleration.
+#   The factor is: slicer accel / max(max_x_accel, max_y_accel).
+```
+
 ### CoreXZ Kinematics
 
 See [example-corexz.cfg](../config/example-corexz.cfg) for an example
@@ -478,6 +701,52 @@ max_z_accel:
 [stepper_z]
 ```
 
+### ⚠️ CoreXZ Kinematics with limits for X and Y axes
+
+```
+[printer]
+kinematics: limited_corexz
+max_velocity: 500 # Hypotenuse of the two values bellow
+max_x_velocity: 400
+max_y_velocity: 300
+max_z_velocity: 5
+max_accel: 1500 # Default acceleration of your choice
+max_x_accel: 12000
+max_y_accel: 9000
+max_z_accel: 100
+scale_xy_accel: [True/False, default False]
+```
+
+`max_velocity` is usually the hypotenuses of X and Y velocity, For example:
+with `max_x_velocity: 300` and `max_y_velocity: 400`, the recommended value
+is `max_velocity: 500`.
+
+If `scale_xy_accel` is False, `max_accel`, set by `M204` or
+`SET_VELOCITY_LIMIT`, acts as a third limit. In that case, this module
+doesn't apply limitations to moves with an acceleration lower than
+`max_x_accel` and `max_y_accel`.
+
+When `scale_xy_accel` is `True`, `max_x_accel` and `max_y_accel` are scaled by
+the ratio of the dynamically set acceleration and the hypotenuse of
+`max_x_accel` and `max_y_accel`, as reported from `SET_KINEMATICS_LIMIT`.
+This means that the actual acceleration will always depend on the
+direction.
+
+For example with these settings:
+```
+[printer]
+max_x_accel: 12000
+max_y_accel: 9000
+scale_xy_accel: True
+```
+
+SET_KINEMATICS_LIMIT will report a maximum acceleration of 15000 mm/s^2
+on 37 degrees diagonals. Thus, setting an acceleration of 3000 mm/s^2 in
+the slicer will make the toolhead accelerate at 3000 mm/s^2 on these 37
+and 143 degrees diagonals, but only 12000 * 3000 / 15000 = 2400 mm/s^2
+for moves aligned with the X axis and 18000 mm/s^2 for pure Y moves.
+
+
 ### Hybrid-CoreXY Kinematics
 
 See [example-hybrid-corexy.cfg](../config/example-hybrid-corexy.cfg)
@@ -492,6 +761,9 @@ parameters.
 ```
 [printer]
 kinematics: hybrid_corexy
+invert_kinematics: False
+# ⚠️ Some hybrid_corexy machines with dual carriages may need to
+#   invert the kinematics if the toolheads move in reverse
 max_z_velocity:
 #   This sets the maximum velocity (in mm/s) of movement along the z
 #   axis. The default is to use max_velocity for max_z_velocity.
@@ -526,6 +798,9 @@ parameters.
 ```
 [printer]
 kinematics: hybrid_corexz
+invert_kinematics: False
+# ⚠️ Some hybrid_corexy machines with dual carriages may need to
+#   invert the kinematics if the toolheads move in reverse
 max_z_velocity:
 #   This sets the maximum velocity (in mm/s) of movement along the z
 #   axis. The default is to use max_velocity for max_z_velocity.
@@ -715,7 +990,7 @@ anchor_z:
 ### None Kinematics
 
 It is possible to define a special "none" kinematics to disable
-kinematic support in Klipper. This may be useful for controlling
+kinematic support in Kalico. This may be useful for controlling
 devices that are not typical 3d-printers or for debugging purposes.
 
 ```
@@ -735,7 +1010,8 @@ The extruder section is used to describe the heater parameters for the
 nozzle hotend along with the stepper controlling the extruder. See the
 [command reference](G-Codes.md#extruder) for additional information.
 See the [pressure advance guide](Pressure_Advance.md) for information
-on tuning pressure advance.
+on tuning pressure advance. See [PID](PID.md) or [MPC](MPC.md) for more
+detailed information about the control methods.
 
 ```
 [extruder]
@@ -822,13 +1098,16 @@ sensor_pin:
 #   be smoothed to reduce the impact of measurement noise. The default
 #   is 1 seconds.
 control:
-#   Control algorithm (either pid or watermark). This parameter must
-#   be provided.
-pid_Kp:
-pid_Ki:
-pid_Kd:
+#   Control algorithm (either pid, pid_v, watermark or mpc). This parameter must
+#   be provided. pid_v should only be used on well calibrated heaters with
+#   low to moderate noise.
+#
+#   If control: pid or pid_v
+#pid_Kp:
+#pid_Ki:
+#pid_Kd:
 #   The proportional (pid_Kp), integral (pid_Ki), and derivative
-#   (pid_Kd) settings for the PID feedback control system. Klipper
+#   (pid_Kd) settings for the PID feedback control system. Kalico
 #   evaluates the PID settings with the following general formula:
 #     heater_pwm = (Kp*error + Ki*integral(error) - Kd*derivative(error)) / 255
 #   Where "error" is "requested_temperature - measured_temperature"
@@ -836,11 +1115,23 @@ pid_Kd:
 #   off and 1.0 being full on. Consider using the PID_CALIBRATE
 #   command to obtain these parameters. The pid_Kp, pid_Ki, and pid_Kd
 #   parameters must be provided for PID heaters.
+#
+#   If control: watermark
 #max_delta: 2.0
 #   On 'watermark' controlled heaters this is the number of degrees in
 #   Celsius above the target temperature before disabling the heater
 #   as well as the number of degrees below the target before
 #   re-enabling the heater. The default is 2 degrees Celsius.
+#
+#   If control: mpc
+#   See MPC.md for details about these parameters.
+#heater_power:
+#cooling_fan:
+#ambient_temp_sensor:
+#filament_diameter: 1.75
+#filament_density: 1.2
+#filament_heat_capacity: 1.8
+#
 #pwm_cycle_time: 0.100
 #   Time in seconds for each software PWM cycle of the heater. It is
 #   not recommended to set this unless there is an electrical
@@ -859,6 +1150,11 @@ max_temp:
 #   heater and sensor hardware failures. Set this range just wide
 #   enough so that reasonable temperatures do not result in an error.
 #   These parameters must be provided.
+per_move_pressure_advance: False
+#   If true, uses pressure advance constant from trapq when processing moves
+#   This causes changes to pressure advance be taken into account immediately,
+#   for all moves in the current queue, rather than ~250ms later once the queue gets flushed
+
 ```
 
 ### [heater_bed]
@@ -877,6 +1173,37 @@ max_temp:
 #   See the "extruder" section for a description of the above parameters.
 ```
 
+### [pid_profile]
+
+Pid Profiles specify a set of PID values that can be loaded at runtime.
+
+```
+[pid_profile <heater> <profile-name>]
+pid_version: 1
+# This defines the version it was saved with and is important for compatibility
+# checks, leave it at 1!
+pid_target:
+# For reference only, specifies the temperature the profile was calibrated for.
+# If you create a custom profile, either enter the temperature that profile is
+# intended to be used at or leave it blank.
+pid_tolerance:
+# The tolerance that was used when autocalibrating the profile. If you define
+# a custom profile, leave it empty.
+control: <pid|pid_v>
+# Has to be either pid or pid_v.
+# This parameter is required.
+pid_kp:
+# The P value for the PID Control.
+# This parameter is required.
+pid_ki:
+# The I value for the PID Control.
+# This parameter is required.
+pid_kd:
+# The D value for the PID Control.
+# This parameter is required.
+```
+For more information, read up on docs/PID.md
+
 ## Bed level support
 
 ### [bed_mesh]
@@ -891,6 +1218,7 @@ See the [bed mesh guide](Bed_Mesh.md) and
 [command reference](G-Codes.md#bed_mesh) for additional information.
 
 Visual Examples:
+
 ```
  rectangular bed, probe_count = 3, 3:
              x---x---x (max_point)
@@ -998,13 +1326,12 @@ Visual Examples:
 #adaptive_margin:
 #   An optional margin (in mm) to be added around the bed area used by
 #   the defined print objects when generating an adaptive mesh.
-#scan_overshoot:
-#  The maximum amount of travel (in mm) available outside of the mesh.
-#  For rectangular beds this applies to travel on the X axis, and for round beds
-#  it applies to the entire radius.  The tool must be able to travel the amount
-#  specified outside of the mesh.  This value is used to optimize the travel
-#  path when performing a "rapid scan".  The minimum value that may be specified
-#  is 1.  The default is no overshoot.
+#bed_mesh_default:
+#   Optionally provide the name of a profile you would like loaded on init.
+#   By default, no profile is loaded.
+#use_probe_xy_offsets: True
+#   If True, apply the `[probe]` XY offsets to the probed positions. The
+#   default is True.
 ```
 
 ### [bed_tilt]
@@ -1042,6 +1369,9 @@ information.
 #horizontal_move_z: 5
 #   The height (in mm) that the head should be commanded to move to
 #   just prior to starting a probe operation. The default is 5.
+#use_probe_xy_offsets: False
+#   If True, apply the `[probe]` XY offsets to the probed positions. The
+#   default is False.
 ```
 
 ### [bed_screws]
@@ -1125,10 +1455,13 @@ information.
 #screw_thread: CW-M3
 #   The type of screw used for bed leveling, M3, M4, or M5, and the
 #   rotation direction of the knob that is used to level the bed.
-#   Accepted values: CW-M3, CCW-M3, CW-M4, CCW-M4, CW-M5, CCW-M5.
+#   Accepted values: CW-M3, CCW-M3, CW-M4, CCW-M4, CW-M5, CCW-M5, CW-M8, CCW-M8.
 #   Default value is CW-M3 which most printers use. A clockwise
 #   rotation of the knob decreases the gap between the nozzle and the
 #   bed. Conversely, a counter-clockwise rotation increases the gap.
+#use_probe_xy_offsets: False
+#   If True, apply the `[probe]` XY offsets to the probed positions. The
+#   default is False.
 ```
 
 ### [z_tilt]
@@ -1160,6 +1493,17 @@ extended [G-Code command](G-Codes.md#z_tilt) becomes available.
 #horizontal_move_z: 5
 #   The height (in mm) that the head should be commanded to move to
 #   just prior to starting a probe operation. The default is 5.
+#min_horizontal_move_z: 1.0
+#   The minimum value for horizontal move z to be used when
+#   adaptive_horizontal_move_z is enabled.
+#   The default is 1mm
+#adaptive_horizontal_move_z: False
+#   Set it to True to automatically adjust horizontal move z after the first
+#   adjustment round, based on error.
+#   When enabled, the initial horizontal_move_z is the config value,
+#   and subsequent iterations will set horizontal_move_z to
+#   the ceil of error, or min_horizontal_move_z - whichever is greater.
+#   The default is False.
 #retries: 0
 #   Number of times to retry if the probed points aren't within
 #   tolerance.
@@ -1170,6 +1514,84 @@ extended [G-Code command](G-Codes.md#z_tilt) becomes available.
 #   more points than steppers then you will likely have a fixed
 #   minimum value for the range of probed points which you can learn
 #   by observing command output.
+#increasing_threshold: 0.0000001
+#   Sets the threshold that probe points can increase before z_tilt aborts.
+#   To disable the validation, set this parameter to a high value.
+#use_probe_xy_offsets: False
+#   If True, apply the `[probe]` XY offsets to the probed positions. The
+#   default is False.
+#enforce_lift_speed: False
+#   By default, the first Z movement to reach `horizontal_move_z` uses `speed`.
+#   Set `enforce_lift_speed` to True to enforce the `lift_speed`.
+#   The default is False.
+```
+
+#### [z_tilt_ng]
+
+z_tilt's next generation, adding the Z_TILT_CALIBRATE and Z_TILT_AUTODETECT
+extended [G-Code commands](G-Codes.md#z_tilt_ng). Z_TILT_CALIBRATE performs multiple
+probing runs to calculate z_offsets, enabling accurate tilt adjustment with fewer
+probe points. Z_TILT_AUTODETECT automatically determines pivot positions for each
+Z stepper through iterative probing. When this section is present, these extended
+commands become available, enhancing bed leveling accuracy and calibration efficiency.
+
+```
+[z_tilt_ng]
+#z_positions:
+# See [z_tilt]. This parameter must be provided,
+#   unless the parameter "extra_points" is provided. In that case only
+#   the command Z_TILT_AUTODETECT can be run to automatically determine
+#   the z_positions. See 'extra_points' below.
+#z_offsets:
+#   A list of Z offsets for each z_position. The z_offset is added to each
+#   probed value during Z_TILT_ADJUST to offset for unevenness of the bed.
+#   This values can also be automatically detected by running
+#   Z_TILT_CALIBRATE. See "extra_points" below.
+#points:
+# See [z_tilt]
+#speed: 50
+# See [z_tilt]
+#horizontal_move_z: 5
+# See [z_tilt]
+#min_horizontal_move_z: 1.0
+# See [z_tilt]
+#adaptive_horizontal_move_z: False
+# See [z_tilt]
+#retries: 0
+# See [z_tilt]
+#retry_tolerance: 0
+# See [z_tilt]
+#increasing_threshold: 0.0000001
+# See [z_tilt]
+#use_probe_xy_offsets: False
+# See [z_tilt]
+#enforce_lift_speed: False
+# See [z_tilt]
+#extra_points:
+#   A list in the same format as "points" above. This list contains
+#   additional points to be probed during the two calibration commands
+#   Z_TILT_CALIBRATE and Z_TILT_AUTODETECT. If the bed is not perfectly
+#   level, it is possible to specify more probing points with "points".
+#   In that Z_TILT_ADJUST will determine the best fit via a least squares
+#   algorithm. As this comes with additional overhead on each Z_TILT_ADJUST
+#   run, it is instead possible to move the additional probing points here,
+#   and use Z_TILT_CALIBRATE to find z_offsets to use for the probing points
+#   used in Z_TILT_ADJUST.
+#   The extra points are also used during T_ZILT_AUTODETECT. This command
+#   can determine the z_positions automatically by during several probings
+#   with intentionally tilted bed. It is currently only implemented for 3
+#   z steppers.
+#   Note that for both commands to work numpy has to be installed.
+#averaging_len: 3
+#   Z_TILT_CALIBRATE and Z_TILT_AUTODETECT both run repeatedly until the
+#   result can no longer be improved. To determine this, the probed values
+#   are averaged. The number of runs to average over is configured with this
+#   parameter.
+#autodetect_delta: 1.0
+#   The amount by which Z_TILT_AUTODETECT intentionally tilts the bed. Higher
+#   values yield better results, but can also lead to situations where the
+#   bed is tilted in a way that the nozzle touched the bed before the probe.
+#   The default is conservative.
 ```
 
 ### [quad_gantry_level]
@@ -1181,6 +1603,7 @@ WARNING: Using this on a moving bed may lead to undesirable results.
 If this section is present then a QUAD_GANTRY_LEVEL extended G-Code
 command becomes available. This routine assumes the following Z motor
 configuration:
+
 ```
  ----------------
  |Z1          Z2|
@@ -1191,6 +1614,7 @@ configuration:
  |Z           Z3|
  ----------------
 ```
+
 Where x is the 0, 0 point on the bed
 
 ```
@@ -1211,6 +1635,17 @@ Where x is the 0, 0 point on the bed
 #horizontal_move_z: 5
 #   The height (in mm) that the head should be commanded to move to
 #   just prior to starting a probe operation. The default is 5.
+#min_horizontal_move_z: 1.0
+#   The minimum value for horizontal move z to be used when
+#   adaptive_horizontal_move_z is enabled.
+#   The default is 1mm
+#adaptive_horizontal_move_z: False
+#   Set it to True to automatically adjust horizontal move z after the first
+#   adjustment round, based on error.
+#   When enabled, the initial horizontal_move_z is the config value,
+#   and subsequent iterations will set horizontal_move_z to
+#   the ceil of error, or min_horizontal_move_z - whichever is greater.
+#   The default is False.
 #max_adjust: 4
 #   Safety limit if an adjustment greater than this value is requested
 #   quad_gantry_level will abort.
@@ -1220,6 +1655,16 @@ Where x is the 0, 0 point on the bed
 #retry_tolerance: 0
 #   If retries are enabled then retry if largest and smallest probed
 #   points differ more than retry_tolerance.
+#increasing_threshold: 0.0000001
+#   Sets the threshold that probe points can increase before qgl aborts.
+#   To disable the validation, set this parameter to a high value.
+#use_probe_xy_offsets: False
+#   If True, apply the `[probe]` XY offsets to the probed positions. The
+#   default is False.
+#enforce_lift_speed: False
+#   By default, the first Z movement to reach `horizontal_move_z` uses `speed`.
+#   Set `enforce_lift_speed` to True to enforce the `lift_speed`.
+#   The default is False.
 ```
 
 ### [skew_correction]
@@ -1303,6 +1748,8 @@ home_xy_position:
 #move_to_previous: False
 #   When set to True, the X and Y axes are reset to their previous
 #   positions after Z axis homing. The default is False.
+#home_y_before_x: False
+#  # If True, the Y axis will home first. The default is False.
 ```
 
 ### [homing_override]
@@ -1457,7 +1904,8 @@ explicit idle_timeout config section to change the default settings.
 #   "TURN_OFF_HEATERS" and "M84".
 #timeout: 600
 #   Idle time (in seconds) to wait before running the above G-Code
-#   commands. The default is 600 seconds.
+#   commands. Set it to 0 to disable the timeout feature.
+#   The default is 600 seconds.
 ```
 
 ## Optional G-Code features
@@ -1465,7 +1913,7 @@ explicit idle_timeout config section to change the default settings.
 ### [virtual_sdcard]
 
 A virtual sdcard may be useful if the host machine is not fast enough
-to run OctoPrint well. It allows the Klipper host software to directly
+to run OctoPrint well. It allows the Kalico host software to directly
 print gcode files stored in a directory on the host using standard
 sdcard G-Code commands (eg, M24).
 
@@ -1481,6 +1929,9 @@ path:
 #   A list of G-Code commands to execute when an error is reported.
 #   See docs/Command_Templates.md for G-Code format. The default is to
 #   run TURN_OFF_HEATERS.
+#with_subdirs: False
+#   Enable scanning of subdirectories for the menu and for the
+#   M20 and M23 commands. The default is False.
 ```
 
 ### [sdcard_loop]
@@ -1498,7 +1949,9 @@ file for a Marlin compatible M808 G-Code macro.
 [sdcard_loop]
 ```
 
-### [force_move]
+### ⚠️ [force_move]
+
+This module is enabled by default in Kalico!
 
 Support manually moving stepper motors for diagnostic purposes. Note,
 using this feature may place the printer in an invalid state - see the
@@ -1506,9 +1959,9 @@ using this feature may place the printer in an invalid state - see the
 
 ```
 [force_move]
-#enable_force_move: False
-#   Set to true to enable FORCE_MOVE and SET_KINEMATIC_POSITION
-#   extended G-Code commands. The default is false.
+#enable_force_move: True
+#   Set to `True` to enable FORCE_MOVE and SET_KINEMATIC_POSITION
+#   extended G-Code commands. The default is `True`.
 ```
 
 ### [pause_resume]
@@ -1534,17 +1987,40 @@ allowing per-filament settings and runtime tuning.
 
 ```
 [firmware_retraction]
-#retract_length: 0
-#   The length of filament (in mm) to retract when G10 is activated,
-#   and to unretract when G11 is activated (but see
-#   unretract_extra_length below). The default is 0 mm.
-#retract_speed: 20
-#   The speed of retraction, in mm/s. The default is 20 mm/s.
-#unretract_extra_length: 0
-#   The length (in mm) of *additional* filament to add when
-#   unretracting.
-#unretract_speed: 10
-#   The speed of unretraction, in mm/s. The default is 10 mm/s.
+#retract_length: 0.0
+#   The length of filament (in mm) to retract when a G10 command is
+#   executed. When a G11 command is executed, the unretract_length
+#   is the sum of the retract_length and the unretract_extra_length
+#   (see below). The minimum value and default are 0 mm, which
+#   disables firmware retraction.
+#retract_speed: 20.0
+#   The speed of filament retraction moves (in mm/s).
+#   This value is typically set relatively high (>40 mm/s),
+#   except for soft and/oozy filaments like TPU and PETG
+#   (20 to 30 mm/s). The minimum value is 1 mm/s, the default value
+#   is 20 mm/s.
+#unretract_extra_length: 0.0
+#   The *additional* length (in mm) to add or the length to subtract
+#   from the filament move when unretracting compared to the retract
+#   move length. This allows priming the nozzle (positive extra length)
+#   or delaying extrusion after unretracting (negative length). The
+#   latter may help reduce blobbing. The minimum value is -1 mm
+#   (2.41 mm3 volume for 1.75 mm filament), the default value is 0 mm.
+#unretract_speed: 10.0
+#   The speed of filament unretraction moves (in mm/s).
+#   This parameter is not particularly critical, although often lower
+#   than retract_speed. The minimum value is 1 mm/s, the default value
+#   is 10 mm/s.
+#z_hop_height: 0.0
+#   The vertical height by which the nozzle is lifted from the print to
+#   prevent collisions with the print during travel moves when retracted.
+#   The minimum value is 0 mm, the default value is 0 mm, which disables
+#   zhop moves. The value will be reduced if the zhop move reaches
+#   maximum z.
+#clear_zhop_on_z_moves: False
+#   If True, when a change in Z is sent while toolhead is retracted,
+#   z_hop is cancelled until next retraction. Otherwise,
+#   `z_hop_height` is applied as an offset to all movements.
 ```
 
 ### [gcode_arcs]
@@ -1563,6 +2039,8 @@ Support for gcode arc (G2/G3) commands.
 
 ### [respond]
 
+This module is enabled by default in Kalico!
+
 Enable the "M118" and "RESPOND" extended
 [commands](G-Codes.md#respond).
 
@@ -1577,20 +2055,29 @@ Enable the "M118" and "RESPOND" extended
 #default_prefix: echo:
 #   Directly sets the default prefix. If present, this value will
 #   override the "default_type".
+#enable_respond: True
+#   Set to `True` to enable M118 and RESPOND
+#   extended G-Code commands. The default is `True`.
 ```
 
 ### [exclude_object]
+
+This module is enabled by default in Kalico!
+
 Enables support to exclude or cancel individual objects during the printing
 process.
 
 See the [exclude objects guide](Exclude_Object.md) and
-[command reference](G-Codes.md#excludeobject)
+[command reference](G-Codes.md#exclude_object)
 for additional information. See the
 [sample-macros.cfg](../config/sample-macros.cfg) file for a
 Marlin/RepRapFirmware compatible M486 G-Code macro.
 
 ```
 [exclude_object]
+#enable_exclude_object: True
+#   Set to `True` to enable `EXCLUDE_OBJECT_*` extended G-Code commands.
+#   The default is `True`.
 ```
 
 ## Resonance compensation
@@ -1667,6 +2154,25 @@ cs_pin:
 #   not recommended to change this rate from the default 3200, and
 #   rates below 800 will considerably affect the quality of resonance
 #   measurements.
+```
+
+### [icm20948]
+
+Support for icm20948 accelerometers.
+
+```
+[icm20948]
+#i2c_address:
+#   Default is 104 (0x68). If AD0 is high, it would be 0x69 instead.
+#i2c_mcu:
+#i2c_bus:
+#i2c_software_scl_pin:
+#i2c_software_sda_pin:
+#i2c_speed: 400000
+#   See the "common I2C settings" section for a description of the
+#   above parameters. The default "i2c_speed" is 400000.
+#axes_map: x, y, z
+#   See the "adxl345" section for information on this parameter.
 ```
 
 ### [lis2dw]
@@ -1770,21 +2276,26 @@ section of the measuring resonances guide for more information on
 #   resonances at. At least one point is required. Make sure that all
 #   points with some safety margin in XY plane (~a few centimeters)
 #   are reachable by the toolhead.
+#accel_chips:
+#   A comma-separated list of accelerometer chips to use for measurements.
+#   For example, "accel_chips: adxl345 head, adxl345 bed" would use two
+#   separate accelerometer chips. This parameter has priority over the
+#   other accelerometer parameters if specified.
 #accel_chip:
 #   A name of the accelerometer chip to use for measurements. If
 #   adxl345 chip was defined without an explicit name, this parameter
 #   can simply reference it as "accel_chip: adxl345", otherwise an
 #   explicit name must be supplied as well, e.g. "accel_chip: adxl345
-#   my_chip_name". Either this, or the next two parameters must be
-#   set.
+#   my_chip_name". Either this, 'accel_chips', or the next two parameters
+#   must be set.
 #accel_chip_x:
 #accel_chip_y:
 #   Names of the accelerometer chips to use for measurements for each
 #   of the axis. Can be useful, for instance, on bed slinger printer,
 #   if two separate accelerometers are mounted on the bed (for Y axis)
 #   and on the toolhead (for X axis). These parameters have the same
-#   format as 'accel_chip' parameter. Only 'accel_chip' or these two
-#   parameters must be provided.
+#   format as 'accel_chip' parameter. Only one of 'accel_chips', 'accel_chip',
+#   or these two parameters must be provided.
 #max_smoothing:
 #   Maximum input shaper smoothing to allow for each axis during shaper
 #   auto-calibration (with 'SHAPER_CALIBRATE' command). By default no
@@ -1797,7 +2308,7 @@ section of the measuring resonances guide for more information on
 #   Minimum frequency to test for resonances. The default is 5 Hz.
 #max_freq: 133.33
 #   Maximum frequency to test for resonances. The default is 133.33 Hz.
-#accel_per_hz: 60
+#accel_per_hz: 75
 #   This parameter is used to determine which acceleration to use to
 #   test a specific frequency: accel = accel_per_hz * freq. Higher the
 #   value, the higher is the energy of the oscillations. Can be set to
@@ -1805,6 +2316,7 @@ section of the measuring resonances guide for more information on
 #   the printer. However, lower values make measurements of
 #   high-frequency resonances less precise. The default value is 75
 #   (mm/sec).
+#   Set it to 60 as a good baseline when using the sweeping resonance tester.
 #hz_per_sec: 1
 #   Determines the speed of the test. When testing all frequencies in
 #   range [min_freq, max_freq], each second the frequency increases by
@@ -1813,11 +2325,11 @@ section of the measuring resonances guide for more information on
 #   (Hz/sec == sec^-2).
 #sweeping_accel: 400
 #   An acceleration of slow sweeping moves. The default is 400 mm/sec^2.
-#sweeping_period: 1.2
-#   A period of slow sweeping moves. Setting this parameter to 0
-#   disables slow sweeping moves. Avoid setting it to a too small
+#sweeping_period: 0
+#   A period of slow sweeping moves. Avoid setting it to a too small
 #   non-zero value in order to not poison the measurements.
-#   The default is 1.2 sec which is a good all-round choice.
+#   To enable it, start by setting it to 1.2 sec which is a good all-round
+#   choice. Set it to 0 do disable it. The default is 0.
 ```
 
 ## Config file helpers
@@ -1847,7 +2359,7 @@ aliases_<name>:
 
 Include file support. One may include additional config file from the
 main printer config file. Wildcards may also be used (eg,
-"configs/*.cfg").
+"configs/\*.cfg", or "configs/\*\*/\*.cfg" if using python version >=3.5).
 
 ```
 [include my_other_config.cfg]
@@ -1858,8 +2370,10 @@ main printer config file. Wildcards may also be used (eg,
 This tool allows a single micro-controller pin to be defined multiple
 times in a config file without normal error checking. This is intended
 for diagnostic and debugging purposes. This section is not needed
-where Klipper supports using the same pin multiple times, and using
+where Kalico supports using the same pin multiple times, and using
 this override may cause confusing and unexpected results.
+One may specify an explicit name (eg, [duplicate_pin_override my_name])
+to define multiple instances of it.
 
 ```
 [duplicate_pin_override]
@@ -1890,7 +2404,7 @@ pin:
 #   than the Z steppers then it enables "multi-mcu homing". This
 #   parameter must be provided.
 #deactivate_on_each_sample: True
-#   This determines if Klipper should execute deactivation gcode
+#   This determines if Kalico should execute deactivation gcode
 #   between each probe attempt when performing a multiple probe
 #   sequence. The default is True.
 #x_offset: 0.0
@@ -1940,6 +2454,10 @@ z_offset:
 #   completes. See docs/Command_Templates.md for G-Code format. Do not
 #   issue any commands here that move the toolhead. The default is to
 #   not run any special G-Code commands on deactivation.
+#drop_first_result: False
+#   Set to `True` will probe one extra time and remove the first
+#   sample from calculation. This can improve probe accuracy for
+#   printers that have an outlier first sample.
 ```
 
 ### [bltouch]
@@ -1963,12 +2481,12 @@ control_pin:
 #   The amount of time (in seconds) to wait for the BLTouch pin to
 #   move up or down. The default is 0.680 seconds.
 #stow_on_each_sample: True
-#   This determines if Klipper should command the pin to move up
+#   This determines if Kalico should command the pin to move up
 #   between each probe attempt when performing a multiple probe
 #   sequence. Read the directions in docs/BLTouch.md before setting
 #   this to False. The default is True.
 #probe_with_touch_mode: False
-#   If this is set to True then Klipper will probe with the device in
+#   If this is set to True then Kalico will probe with the device in
 #   "touch_mode". The default is False (probing in "pin_down" mode).
 #pin_up_reports_not_triggered: True
 #   Set if the BLTouch consistently reports the probe in a "not
@@ -1997,6 +2515,118 @@ control_pin:
 #samples_result:
 #samples_tolerance:
 #samples_tolerance_retries:
+#   See the "probe" section for information on these parameters.
+```
+
+### ⚠️ [dockable_probe]
+
+Certain probes are magnetically coupled to the toolhead and stowed
+in a dock when not in use. One should define this section instead
+of a probe section if the probe uses magnets to attach and a dock
+for storage. See [Dockable Probe Guide](Dockable_Probe.md)
+for more detailed information regarding configuration and setup.
+
+```
+[dockable_probe]
+dock_position: 0,0,0
+#   The physical position of the probe dock relative to the origin of
+#   the bed. The coordinates are specified as a comma separated X, Y, Z
+#   list of values. Certain dock designs are independent of the Z axis.
+#   If Z is specified the toolhead will move to the Z location before the X, Y
+#   coordinates.
+#   This parameter is required.
+approach_position: 0,0,0
+#   The X, Y, Z position where the toolhead needs to be prior to moving into the
+#   dock so that the probe is aligned properly for attaching or detaching.
+#   If Z is specified the toolhead will move to the Z location before the X, Y
+#   coordinates.
+#   This parameter is required.
+detach_position: 0,0,0
+#   Similar to the approach_position, the detach_position is the coordinates
+#   where the toolhead is moved after the probe has been docked.
+#   For magnetically coupled probes, this is typically perpendicular to
+#   the approach_position in a direction that does not cause the tool to
+#   collide with the printer.
+#   If Z is specified the toolhead will move to the Z location before the X, Y
+#   coordinates.
+#   This parameter is required.
+#extract_position: 0,0,0
+#   Similar to the approach_position, the extract_position is the coordinates
+#   where the toolhead is moved to extract the probe from the dock.
+#   If Z is specified the toolhead will move to the Z location before the X, Y
+#   coordinates.
+#   The default value is approach_probe value.
+#insert_position: 0,0,0
+#   Similar to the extract_position, the insert_position is the coordinates
+#   where the toolhead is moved before inserting the probe into the dock.
+#   If Z is specified the toolhead will move to the Z location before the X, Y
+#   coordinates.
+#   The default value is extract_probe value.
+#safe_dock_distance :
+#   This setting defines a security area around dock during ATTACH/DETACH_PROBE
+#   commands. While inside the area, the toolhead move away prior to reach the
+#   approach or insert position.
+#   Default is the smallest distance to the dock of approach, detach, insert
+#   position. It could be only lower than the Default value.
+#safe_position : approach_position
+#   A safe position to ensure MOVE_AVOIDING_DOCK travel does not move the
+#   toolhead out of range.
+#z_hop: 15.0
+#   Distance (in mm) to lift the Z axis prior to attaching/detaching the probe.
+#   If the Z axis is already homed and the current Z position is less
+#   than `z_hop`, then this will lift the head to a height of `z_hop`. If
+#   the Z axis is not already homed the head is lifted by `z_hop`.
+#   The default is to not implement Z hop.
+#restore_toolhead: True
+#   While True, the position of the toolhead is restored to the position prior
+#   to the attach/detach movements.
+#   The default value is True.
+#dock_retries:
+#   The number of times to attempt to attach/dock the probe before raising
+#   an error and aborting probing.
+#   The default is 0.
+#auto_attach_detach: False
+#   Enable/Disable the automatic attaching/detaching of the probe during
+#   actions that require the probe.
+#   The default is True.
+#attach_speed:
+#detach_speed:
+#travel_speed:
+#   Optional speeds used during moves.
+#   The default is to use `speed` of `probe` or 5.0.
+#check_open_attach:
+#   The probe status should be verified prior to homing. Setting this option
+#   to true will check the probe "endstop" is "open" after attaching and
+#   will abort probing if not, also checking for "triggered" after docking.
+#   Conversively, setting this to false, the probe should read "triggered"
+#   after attaching and "open" after docking. If not, probing will abort.
+#probe_sense_pin:
+#   This supplemental pin can be defined to determine an attached state
+#   instead of check_open_attach.
+#dock_sense_pin:
+#   This supplemental pin can be defined to determine a docked state in
+#   addition to probe_sense_pin or check_open_attach.
+#pre_attach_gcode:
+#   Code to run right before the probe gets attached
+#post_attach_gcode:
+#   Code to run right after the probe gets attached
+#pre_detach_gcode:
+#   Code to run right before the probe gets detached
+#post_detach_gcode:
+#   Code to run right after the probe gets detached
+#
+#x_offset:
+#y_offset:
+#z_offset:
+#lift_speed:
+#speed:
+#samples:
+#sample_retract_dist:
+#samples_result:
+#samples_tolerance:
+#samples_tolerance_retries:
+#activate_gcode:
+#deactivate_gcode:
 #   See the "probe" section for information on these parameters.
 ```
 
@@ -2135,6 +2765,88 @@ calibrate_x: ...
 #   This should be the X coordinate that positions the nozzle during the
 #   calibration process for Y axis twist compensation. This parameter must be
 #   provided and is recommended to be near the center of the bed.
+```
+
+### ⚠️ [z_calibration]
+
+Automatic Z offset calibration. One may define this section if the printer
+is able to calibrate the nozzle's offset automatically. See
+[Z-Calibration guide](Z_Calibration.md) for further
+information.
+
+```
+[z_calibration]
+nozzle_xy_position:
+#   A X, Y coordinate (e.g. 100,100) of the nozzle, clicking on the Z endstop.
+switch_xy_position:
+#   A X, Y coordinate (e.g. 100,100) of the probe's switch body, clicking on
+#   the Z endstop.
+bed_xy_position: default from relative_reference_index of bed_mesh
+#   a X, Y coordinate (e.g. 100,100) where the print surface (e.g. the center
+#   point) is probed. These coordinates will be adapted by the
+#   probe's X and Y offsets. The default is the relative_reference_index
+#   of the configured bed_mesh, if configured. It's possible to change the relative
+#   reference index at runtime or use the GCode argument BED_POSITION of CALIBRATE_Z.
+switch_offset:
+#   The trigger point offset of the used mag-probe switch.
+#   Larger values will position the nozzle closer to the bed.
+#   This needs to be find out manually. More on this later
+#   in this section..
+max_deviation: 1.0
+#   The maximum allowed deviation of the calculated offset.
+#   If the offset exceeds this value, it will stop!
+#   The default is 1.0 mm.
+samples: default from "probe:samples" section
+#   The number of times to probe each point. The probed z-values
+#   will be averaged. The default is from the probe's configuration.
+samples_tolerance: default from "probe:samples_tolerance" section
+#   The maximum Z distance (in mm) that a sample may differ from other
+#   samples. The default is from the probe's configuration.
+samples_tolerance_retries: default from "probe:samples_tolerance_retries" section
+#   The number of times to retry if a sample is found that exceeds
+#   samples_tolerance. The default is from the probe's configuration.
+samples_result: default from "probe:samples_result" section
+#   The calculation method when sampling more than once - either
+#   "median" or "average". The default is from the probe's configuration.
+clearance: 2 * z_offset from the "probe:z_offset" section
+#   The distance in mm to move up before moving to the next
+#   position. The default is two times the z_offset from the probe's
+#   configuration.
+position_min: default from "stepper_z:position_min" section.
+#   Minimum valid distance (in mm) used for probing move. The
+#   default is from the Z rail configuration.
+speed: 50
+#   The moving speed in X and Y. The default is 50 mm/s.
+lift_speed: default from "probe:lift_speed" section
+#   Speed (in mm/s) of the Z axis when lifting the probe between
+#   samples and clearance moves. The default is from the probe's
+#   configuration.
+probing_speed: default from "stepper_z:homing_speed" section.
+#   The fast probing speed (in mm/s) used, when probing_first_fast
+#   is activated. The default is from the Z rail configuration.
+probing_second_speed: default from "stepper_z:second_homing_speed" section.
+#   The slower speed (in mm/s) for probing the recorded samples.
+#   The default is second_homing_speed of the Z rail configuration.
+probing_retract_dist: default from "stepper_z:homing_retract_dist" section.
+#   Distance to retract (in mm) before probing the next sample.
+#   The default is homing_retract_dist from the Z rail configuration.
+probing_first_fast: false
+#   If true, the first probing is done faster by the probing speed.
+#   This is to get faster down and the result is not recorded as a
+#   probing sample. The default is false.
+start_gcode:
+#   A list of G-Code commands to execute prior to each calibration command.
+#   See docs/Command_Templates.md for G-Code format. This can be used to
+#   attach the probe.
+before_switch_gcode:
+#   A list of G-Code commands to execute prior to each probing on the
+#   mag-probe. See docs/Command_Templates.md for G-Code format. This can be
+#   used to attach the probe after probing on the nozzle and before probing
+#   on the mag-probe.
+end_gcode:
+#   A list of G-Code commands to execute after each calibration command.
+#   See docs/Command_Templates.md for G-Code format. This can be used to
+#   detach the probe afterwards.
 ```
 
 ## Additional stepper motors and extruders
@@ -2296,6 +3008,28 @@ printer kinematics.
 #   "homing moves" by adding a STOP_ON_ENDSTOP parameter to
 #   MANUAL_STEPPER movement commands.
 ```
+
+### [mixing_extruder]
+
+A mixing printhead which has <n>in-1out mixing nozzle. When activated
+additional G-Code Commands are available.
+See [G-Codes](G-Codes.md#mixing_extruder) for a detailed description
+of the additional commands.
+
+```
+[mixing_extruder]
+#steppers:
+#   Which steppers feed into the hotend/nozzle. provide a comma
+#   separated list, eg. "extruder,extruder1,extruder2". Should be
+#   the names of either extruder sections or extruder_stepper sections
+#   This configuration is required.
+#extruder_name:
+#   The name of the extruder to synchronize the steppers in the steppers
+#   list to.
+#   The default is the first entry in the
+#   "steppers" list.
+```
+
 
 ## Custom heaters and sensors
 
@@ -2469,72 +3203,9 @@ temperature sensors that are reported via the M105 command.
 #   parameter.
 ```
 
-### [temperature_probe]
-
-Reports probe coil temperature.  Includes optional thermal drift
-calibration for eddy current based probes.   A `[temperature_probe]`
-section may be linked to a `[probe_eddy_current]` by using the same
-postfix for both sections.
-
-```
-[temperature_probe my_probe]
-#sensor_type:
-#sensor_pin:
-#min_temp:
-#max_temp:
-#   Temperature sensor configuration.
-#   See the "extruder" section for the definition of the above
-#   parameters.
-#smooth_time:
-#   A time value (in seconds) over which temperature measurements will
-#   be smoothed to reduce the impact of measurement noise. The default
-#   is 2.0 seconds.
-#gcode_id:
-#   See the "heater_generic" section for the definition of this
-#   parameter.
-#speed:
-#   The travel speed [mm/s] for xy moves during calibration.  Default
-#   is the speed defined by the probe.
-#horizontal_move_z:
-#   The z distance [mm] from the bed at which xy moves will occur
-#   during calibration. Default is 2mm.
-#resting_z:
-#   The z distance [mm] from the bed at which the tool will rest
-#   to heat the probe coil during calibration.  Default is .4mm
-#calibration_position:
-#   The X, Y, Z position where the tool should be moved when
-#   probe drift calibration initializes.  This is the location
-#   where the first manual probe will occur.  If omitted, the
-#   default behavior is not to move the tool prior to the first
-#   manual probe.
-#calibration_bed_temp:
-#   The maximum safe bed temperature (in C) used to heat the probe
-#   during probe drift calibration.  When set, the calibration
-#   procedure will turn on the bed after the first sample is
-#   taken.  When the calibration procedure is complete the bed
-#   temperature will be set to zero.  When omitted the default
-#   behavior is not to set the bed temperature.
-#calibration_extruder_temp:
-#   The extruder temperature (in C) set probe during drift calibration.
-#   When this option is supplied the procedure will wait for until the
-#   specified temperature is reached before requesting the first manual
-#   probe.  When the calibration procedure is complete the extruder
-#   temperature will be set to 0.  When omitted the default behavior is
-#   not to set the extruder temperature.
-#extruder_heating_z: 50.
-#   The Z location where extruder heating will occur if the
-#   "calibration_extruder_temp" option is set.  Its recommended to heat
-#   the extruder some distance from the bed to minimize its impact on
-#   the probe coil temperature.  The default is 50.
-#max_validation_temp: 60.
-#   The maximum temperature used to validate the calibration.  It is
-#   recommended to set this to a value between 100 and 120 for enclosed
-#   printers.  The default is 60.
-```
-
 ## Temperature sensors
 
-Klipper includes definitions for many types of temperature sensors.
+Kalico includes definitions for many types of temperature sensors.
 These sensors may be used in any config section that requires a
 temperature sensor (such as an `[extruder]` or `[heater_bed]`
 section).
@@ -2769,6 +3440,8 @@ monitor these temperatures.
 sensor_type: temperature_mcu
 #sensor_mcu: mcu
 #   The micro-controller to read from. The default is "mcu".
+#reference_voltage:
+#   The reference voltage for the ADC of the mcu. Default is 3.3
 #sensor_temperature1:
 #sensor_adc1:
 #   Specify the above two parameters (a temperature in Celsius and an
@@ -2807,7 +3480,12 @@ sensor_type: temperature_host
 
 ### DS18B20 temperature sensor
 
-DS18B20 is a 1-wire (w1) digital temperature sensor. Note that this sensor is not intended for use with extruders and heater beds, but rather for monitoring ambient temperature (C). These sensors have range up to 125 C, so are usable for e.g. chamber temperature monitoring. They can also function as simple fan/heater controllers. DS18B20 sensors are only supported on the "host mcu", e.g. the Raspberry Pi. The w1-gpio Linux kernel module must be installed.
+DS18B20 is a 1-wire (w1) digital temperature sensor. Note that this sensor
+is not intended for use with extruders and heater beds, but rather for monitoring
+ambient temperature (C). These sensors have range up to 125 C, so are usable for
+e.g. chamber temperature monitoring. They can also function as simple fan/heater
+controllers. DS18B20 sensors are only supported on the "host mcu", e.g. the
+Raspberry Pi. The w1-gpio Linux kernel module must be installed.
 
 ```
 sensor_type: DS18B20
@@ -2824,7 +3502,8 @@ serial_no:
 
 ### Combined temperature sensor
 
-Combined temperature sensor is a virtual temperature sensor based on several other sensors. This sensor can be used with extruders, heater_generic and heater beds.
+Combined temperature sensor is a virtual temperature sensor based on several other
+sensors. This sensor can be used with extruders, heater_generic and heater beds.
 
 ```
 sensor_type: temperature_combined
@@ -2851,15 +3530,14 @@ Print cooling fan.
 pin:
 #   Output pin controlling the fan. This parameter must be provided.
 #max_power: 1.0
-#   The maximum power (expressed as a value from 0.0 to 1.0) that the
-#   pin may be set to. The value 1.0 allows the pin to be set fully
-#   enabled for extended periods, while a value of 0.5 would allow the
-#   pin to be enabled for no more than half the time. This setting may
-#   be used to limit the total power output (over extended periods) to
-#   the fan. If this value is less than 1.0 then fan speed requests
-#   will be scaled between zero and max_power (for example, if
-#   max_power is .9 and a fan speed of 80% is requested then the fan
-#   power will be set to 72%). The default is 1.0.
+#   The maximum power (0.0 to 1.0) that the pin may be set to. A value
+#   of 1.0 enables the pin fully for extended periods, while 0.5 allows
+#   it for no more than half the time. Use it to limit total power output
+#   (over extended periods) to the fan. This value is combined with
+#   min_power to scale fan speed. With `min_power` at 0.3 and
+#   `max_power` at 1.0, fan speed request scales between 0.3 (min_power)
+#   and 1.0 (max_power). Requesting 10% fan speed results in a value of
+#   0.37. Default is 1.0.
 #shutdown_speed: 0
 #   The desired fan speed (expressed as a value from 0.0 to 1.0) if
 #   the micro-controller software enters an error state. The default
@@ -2879,18 +3557,14 @@ pin:
 #   Time (in seconds) to run the fan at full speed when either first
 #   enabling or increasing it by more than 50% (helps get the fan
 #   spinning). The default is 0.100 seconds.
-#off_below: 0.0
-#   The minimum input speed which will power the fan (expressed as a
-#   value from 0.0 to 1.0). When a speed lower than off_below is
-#   requested the fan will instead be turned off. This setting may be
-#   used to prevent fan stalls and to ensure kick starts are
-#   effective. The default is 0.0.
+#min_power: 0.0
+#   The minimum input power which will power the fan (expressed as a
+#   value from 0.0 to 1.0). The default is 0.0.
 #
-#   This setting should be recalibrated whenever max_power is adjusted.
-#   To calibrate this setting, start with off_below set to 0.0 and the
-#   fan spinning. Gradually lower the fan speed to determine the lowest
+#   To calibrate this setting, start with min_power=0 and max_power=1
+#   Gradually lower the fan speed to determine the lowest
 #   input speed which reliably drives the fan without stalls. Set
-#   off_below to the duty cycle corresponding to this value (for
+#   min_power to the duty cycle corresponding to this value (for
 #   example, 12% -> 0.12) or slightly higher.
 #tachometer_pin:
 #   Tachometer input pin for monitoring fan speed. A pullup is generally
@@ -2911,6 +3585,37 @@ pin:
 #   input. In such a case, the PWM pin can be used normally, and e.g. a
 #   ground-switched FET(standard fan pin) can be used to control power to
 #   the fan.
+#off_below:
+#   These option is deprecated and should no longer be specified.
+#   Use `min_power` instead.
+#initial_speed:
+#   Fan speed will be set to this value on startup if specified. Value
+#   is from 0.0 to 1.0.
+```
+
+### [heated_fan]
+
+Heated print cooling fans. An experimental module for high-temperature
+printing that requires part cooling air to be closer to the printed part
+temperature.
+
+```
+
+[heated_fan]
+#   See the "fan" section for a description for fan parameters.
+#   See the "heater_generic" section for a description for the heater
+#   parameters.
+#heater_temp: 50
+#   The target temperature (in Celsius) for the heater when the fan is
+#   turned on. The default is 50 Celsius.
+#min_speed: 1.0
+#   The minimum fan speed (expressed as a value from 0.0 to 1.0) that the
+#   fan will be set to when its associated heater is on (e.g.: to protect
+#   ducts from melting). If the fan is set to a speed lower than min_speed,
+#   the min_speed value is applied. The default is 1.0 (100%)
+#idle_timeout: 60
+#   A timeout in seconds for the fan to stay on when it is requested to turn
+#   off, to protect ducts from melting. The default is 60 (s).
 ```
 
 ### [heater_fan]
@@ -2928,11 +3633,12 @@ a shutdown_speed equal to max_power.
 #cycle_time:
 #hardware_pwm:
 #kick_start_time:
-#off_below:
+#min_power:
 #tachometer_pin:
 #tachometer_ppr:
 #tachometer_poll_interval:
 #enable_pin:
+#initial_speed:
 #   See the "fan" section for a description of the above parameters.
 #heater: extruder
 #   Name of the config section defining the heater that this fan is
@@ -2965,7 +3671,7 @@ watched component.
 #cycle_time:
 #hardware_pwm:
 #kick_start_time:
-#off_below:
+#min_power:
 #tachometer_pin:
 #tachometer_ppr:
 #tachometer_poll_interval:
@@ -3011,7 +3717,7 @@ information.
 #cycle_time:
 #hardware_pwm:
 #kick_start_time:
-#off_below:
+#min_power:
 #tachometer_pin:
 #tachometer_ppr:
 #tachometer_poll_interval:
@@ -3028,7 +3734,7 @@ information.
 #pid_Ki:
 #pid_Kd:
 #   The proportional (pid_Kp), integral (pid_Ki), and derivative
-#   (pid_Kd) settings for the PID feedback control system. Klipper
+#   (pid_Kd) settings for the PID feedback control system. Kalico
 #   evaluates the PID settings with the following general formula:
 #     fan_pwm = max_power - (Kp*e + Ki*integral(e) - Kd*derivative(e)) / 255
 #   Where "e" is "target_temperature - measured_temperature" and
@@ -3053,6 +3759,38 @@ information.
 #gcode_id:
 #   If set, the temperature will be reported in M105 queries using the
 #   given id. The default is to not report the temperature via M105.
+#reverse: False
+#   If true, the working mode of the fan is reversed. If the temperature
+#   is lower than the target temperature, the fan speed increases;
+#   otherwise, the fan speed decreases.
+#   The default is False.
+```
+
+```
+control: curve
+#points:
+#  50.0, 0.0
+#  55.0, 0.5
+#   A user might defne a list of points which consist of a temperature with
+#   it's associated fan speed (temp, fan_speed).
+#   The target_temp value defines the temperature at which the fan will run
+#   at full speed.
+#   The algorithm will use linear interpolation to get the fan speeds
+#   between two points (if one has defined 0.0 for 50° and 1.0 for 60° the
+#   fan would run with 0.5 at 55°)
+#cooling_hysteresis: 0.0
+#   define the temperature hysteresis for lowering the fan speed
+#   (in simple terms this setting offsets the fan curve when cooling down
+#   by the specified amount of degrees celsius. For example, if the
+#   hysteresis is set to 5°C, the fan curve will be moved by -5°C. This
+#   setting can be used to reduce the effects of quickly changing
+#   temperatures around a target temperature which would cause the fan to
+#   speed up and slow down repeatedly.)
+#heating_hysteresis: 0.0
+#   same as cooling_hysteresis but for increasing the fan speed, it is
+#   recommended to be left at 0 for safety reasons
+#smooth_readings: 10
+#   This parameter is deprecated and should no longer be used.
 ```
 
 ### [fan_generic]
@@ -3069,7 +3807,7 @@ with the SET_FAN_SPEED [gcode command](G-Codes.md#fan_generic).
 #cycle_time:
 #hardware_pwm:
 #kick_start_time:
-#off_below:
+#min_power:
 #tachometer_pin:
 #tachometer_ppr:
 #tachometer_poll_interval:
@@ -3450,9 +4188,17 @@ run_current:
 #   when the stepper is not moving. Setting a hold_current is not
 #   recommended (see TMC_Drivers.md for details). The default is to
 #   not reduce the current.
-#sense_resistor: 0.110
-#   The resistance (in ohms) of the motor sense resistor. The default
-#   is 0.110 ohms.
+#home_current:
+#   The amount of current (in amps RMS) to configure the driver to use
+#   during homing procedures. The default is to not reduce the current.
+#current_change_dwell_time:
+#   The amount of time (in seconds) to wait after changing homing current.
+#   The default is 0.5 seconds.
+sense_resistor:
+#   The resistance (in ohms) of the driver sense resistor. This parameter
+#   must be provided. Common values are 0.110 ohms for most TMC2209 drivers
+#   and 0.075 ohms for TMC5160 drivers. Check your stepper driver documentation
+#   or board schematic to confirm the correct value.
 #stealthchop_threshold: 0
 #   The velocity (in mm/s) to set the "stealthChop" threshold to. When
 #   set, "stealthChop" mode will be enabled if the stepper motor
@@ -3501,19 +4247,12 @@ run_current:
 #driver_TOFF: 4
 #driver_HEND: 7
 #driver_HSTRT: 0
-#driver_VHIGHFS: 0
-#driver_VHIGHCHM: 0
 #driver_PWM_AUTOSCALE: True
 #driver_PWM_FREQ: 1
 #driver_PWM_GRAD: 4
 #driver_PWM_AMPL: 128
+#driver_FREEWHEEL: 0
 #driver_SGT: 0
-#driver_SEMIN: 0
-#driver_SEUP: 0
-#driver_SEMAX: 0
-#driver_SEDN: 0
-#driver_SEIMIN: 0
-#driver_SFILT: 0
 #   Set the given register during the configuration of the TMC2130
 #   chip. This may be used to set custom motor parameters. The
 #   defaults for each parameter are next to the parameter name in the
@@ -3564,9 +4303,17 @@ run_current:
 #   when the stepper is not moving. Setting a hold_current is not
 #   recommended (see TMC_Drivers.md for details). The default is to
 #   not reduce the current.
-#sense_resistor: 0.110
-#   The resistance (in ohms) of the motor sense resistor. The default
-#   is 0.110 ohms.
+#home_current:
+#   The amount of current (in amps RMS) to configure the driver to use
+#   during homing procedures. The default is to not reduce the current.
+#current_change_dwell_time:
+#   The amount of time (in seconds) to wait after changing homing current.
+#   The default is 0.5 seconds.
+sense_resistor:
+#   The resistance (in ohms) of the driver sense resistor. This parameter
+#   must be provided. Common values are 0.110 ohms for most TMC2209 drivers
+#   and 0.075 ohms for TMC5160 drivers. Check your stepper driver documentation
+#   or board schematic to confirm the correct value.
 #stealthchop_threshold: 0
 #   The velocity (in mm/s) to set the "stealthChop" threshold to. When
 #   set, "stealthChop" mode will be enabled if the stepper motor
@@ -3587,6 +4334,7 @@ run_current:
 #driver_PWM_FREQ: 1
 #driver_PWM_GRAD: 14
 #driver_PWM_OFS: 36
+#driver_FREEWHEEL: 0
 #   Set the given register during the configuration of the TMC2208
 #   chip. This may be used to set custom motor parameters. The
 #   defaults for each parameter are next to the parameter name in the
@@ -3608,7 +4356,9 @@ uart_pin:
 #interpolate: True
 run_current:
 #hold_current:
-#sense_resistor: 0.110
+#home_current:
+#current_change_dwell_time:
+sense_resistor:
 #stealthchop_threshold: 0
 #   See the "tmc2208" section for the definition of these parameters.
 #coolstep_threshold:
@@ -3636,12 +4386,8 @@ run_current:
 #driver_PWM_FREQ: 1
 #driver_PWM_GRAD: 14
 #driver_PWM_OFS: 36
+#driver_FREEWHEEL: 0
 #driver_SGTHRS: 0
-#driver_SEMIN: 0
-#driver_SEUP: 0
-#driver_SEMAX: 0
-#driver_SEDN: 0
-#driver_SEIMIN: 0
 #   Set the given register during the configuration of the TMC2209
 #   chip. This may be used to set custom motor parameters. The
 #   defaults for each parameter are next to the parameter name in the
@@ -3688,9 +4434,17 @@ cs_pin:
 run_current:
 #   The amount of current (in amps RMS) used by the driver during
 #   stepper movement. This parameter must be provided.
-#sense_resistor:
-#   The resistance (in ohms) of the motor sense resistor. This
-#   parameter must be provided.
+#home_current:
+#   The amount of current (in amps RMS) to configure the driver to use
+#   during homing procedures. The default is to not reduce the current.
+#current_change_dwell_time:
+#   The amount of time (in seconds) to wait after changing homing current.
+#   The default is 0.5 seconds.
+sense_resistor:
+#   The resistance (in ohms) of the driver sense resistor. This parameter
+#   must be provided. Common values are 0.110 ohms for most TMC2209 drivers
+#   and 0.075 ohms for TMC5160 drivers. Check your stepper driver documentation
+#   or board schematic to confirm the correct value.
 #idle_current_percent: 100
 #   The percentage of the run_current the stepper driver will be
 #   lowered to when the idle timeout expires (you need to set up the
@@ -3768,9 +4522,15 @@ run_current:
 #   when the stepper is not moving. Setting a hold_current is not
 #   recommended (see TMC_Drivers.md for details). The default is to
 #   not reduce the current.
-#rref: 12000
-#   The resistance (in ohms) of the resistor between IREF and GND. The
-#   default is 12000.
+#home_current:
+#   The amount of current (in amps RMS) to configure the driver to use
+#   during homing procedures. The default is to not reduce the current.
+#current_change_dwell_time:
+#   The amount of time (in seconds) to wait after changing homing current.
+#   The default is 0.5 seconds.
+#rref:
+#   The resistance (in ohms) of the resistor between IREF and GND. This
+#   parameter must be provided.
 #stealthchop_threshold: 0
 #   The velocity (in mm/s) to set the "stealthChop" threshold to. When
 #   set, "stealthChop" mode will be enabled if the stepper motor
@@ -3789,6 +4549,20 @@ run_current:
 #   velocity" threshold (THIGH) to. This is typically used to disable
 #   the "CoolStep" feature at high speeds. The default is to not set a
 #   TMC "high velocity" threshold.
+#current_range:
+#   The current_range bit value for the driver. Valid values are 0-3.
+#   The defaul is to auto-calculate to match the requested run_current.
+#   For further information consult the tmc2240 datasheet and tuning table.
+#driver_CS:
+#   The current scale value for the TMC driver.
+#   The ideal `driver_CS` value may be found by setting the `CS` value in the
+#   TMC calculations spreadsheet (https://www.analog.com/media/en/engineering-tools/design-tools/tmc5240_tmc2240_tmc2210_calculations.xlsx),
+#   under the chopper tab so the hysteresis is not marked as too high.
+#   While it's not necessary to change the CS value, it can be helpful to achieve
+#   adequate hysteresis values on low current steppers.
+#   By default, this value is autocalculated.
+#   If driver_CS is specified this value will be used for homing so make sure it is possible to achieve your homing_current
+#   with the given currentscaler value.
 #driver_MSLUT0: 2863314260
 #driver_MSLUT1: 1251300522
 #driver_MSLUT2: 608774441
@@ -3841,6 +4615,11 @@ run_current:
 #driver_PWM_OFS: 29
 #driver_PWM_REG: 4
 #driver_PWM_LIM: 12
+#driver_SLOPE_CONTROL: 0
+#   The chip has a default value of 0, corresponding to 100V/µs.
+#   Setting this value to 2, corresponding to 400V/µs, approximately
+#   matches the TMC2209. This lowers the power dissipation at a 50kHz
+#   chopper frequency by around 1W.
 #driver_SGT: 0
 #driver_SEMIN: 0
 #driver_SEUP: 0
@@ -3849,7 +4628,6 @@ run_current:
 #driver_SEIMIN: 0
 #driver_SFILT: 0
 #driver_SG4_ANGLE_OFFSET: 1
-#driver_SLOPE_CONTROL: 0
 #   Set the given register during the configuration of the TMC2240
 #   chip. This may be used to set custom motor parameters. The
 #   defaults for each parameter are next to the parameter name in the
@@ -3868,17 +4646,17 @@ run_current:
 
 ### [tmc5160]
 
-Configure a TMC5160 stepper motor driver via SPI bus. To use this
-feature, define a config section with a "tmc5160" prefix followed by
-the name of the corresponding stepper config section (for example,
-"[tmc5160 stepper_x]").
+Configure a TMC5160 or TMC2160 stepper motor driver via SPI bus.
+To use this feature, define a config section with a "tmc5160" prefix
+followed by the name of the corresponding stepper config section
+(for example, "[tmc5160 stepper_x]").
 
 ```
 [tmc5160 stepper_x]
 cs_pin:
-#   The pin corresponding to the TMC5160 chip select line. This pin
-#   will be set to low at the start of SPI messages and raised to high
-#   after the message completes. This parameter must be provided.
+#   The pin corresponding to the TMC5160 or TMC2160 chip select line.
+#   This pin will be set to low at the start of SPI messages and raised
+#   to high after the message completes. This parameter must be provided.
 #spi_speed:
 #spi_bus:
 #spi_software_sclk_pin:
@@ -3903,9 +4681,17 @@ run_current:
 #   when the stepper is not moving. Setting a hold_current is not
 #   recommended (see TMC_Drivers.md for details). The default is to
 #   not reduce the current.
-#sense_resistor: 0.075
-#   The resistance (in ohms) of the motor sense resistor. The default
-#   is 0.075 ohms.
+#home_current:
+#   The amount of current (in amps RMS) to configure the driver to use
+#   during homing procedures. The default is to not reduce the current.
+#current_change_dwell_time:
+#   The amount of time (in seconds) to wait after changing homing current.
+#   The default is 0.5 seconds.
+sense_resistor:
+#   The resistance (in ohms) of the driver sense resistor. This parameter
+#   must be provided. Common values are 0.110 ohms for most TMC2209 drivers
+#   and 0.075 ohms for TMC5160 drivers. Check your stepper driver documentation
+#   or board schematic to confirm the correct value.
 #stealthchop_threshold: 0
 #   The velocity (in mm/s) to set the "stealthChop" threshold to. When
 #   set, "stealthChop" mode will be enabled if the stepper motor
@@ -3960,6 +4746,16 @@ run_current:
 #driver_CHM: 0
 #driver_VHIGHFS: 0
 #driver_VHIGHCHM: 0
+#driver_CS:
+#   The current scale value for the TMC driver.
+#   The ideal `driver_CS` value may be found by setting the `CS` value in the
+#   TMC calculations spreadsheet (https://www.analog.com/media/en/engineering-tools/design-tools/tmc5160_calculations.xlsx),
+#   under the chopper tab so the hysteresis is not marked as too high.
+#   While it's not necessary to change the CS value, it can be helpful to achieve
+#   adequate hysteresis values on low current steppers.
+#   By default, this value is autocalculated.
+#   If driver_CS is specified this value will be used for homing so make sure it is possible to achieve your homing_current
+#   with the given currentscaler value.
 #driver_DISS2G: 0
 #driver_DISS2VS: 0
 #driver_PWM_AUTOSCALE: True
@@ -3981,16 +4777,21 @@ run_current:
 #driver_BBMCLKS: 4
 #driver_BBMTIME: 0
 #driver_FILT_ISENSE: 0
-#   Set the given register during the configuration of the TMC5160
-#   chip. This may be used to set custom motor parameters. The
+#   Set the given register during the configuration of the TMC5160 or
+#   TMC2160 chip. This may be used to set custom motor parameters. The
 #   defaults for each parameter are next to the parameter name in the
 #   above list.
+#⚠️driver_s2vs_level: 6   # Short to Supply tolerance, from 4 to 15
+#⚠️driver_s2g_level: 6    # Short to Ground tolerance, from 2 to 15
+#⚠️driver_shortdelay: 0   # Short trigger delay, 0=750ns, 1=1500ns
+#⚠️driver_short_filter: 1
+#   Short filtering bandwidth. 0=100ns, 1=1us (Default), 2=2us, 3=3us
 #diag0_pin:
 #diag1_pin:
 #   The micro-controller pin attached to one of the DIAG lines of the
-#   TMC5160 chip. Only a single diag pin should be specified. The pin
-#   is "active low" and is thus normally prefaced with "^!". Setting
-#   this creates a "tmc5160_stepper_x:virtual_endstop" virtual pin
+#   TMC5160 or TMC2160 chip. Only a single diag pin should be specified.
+#   The pin is "active low" and is thus normally prefaced with "^!".
+#   Setting this creates a "tmc5160_stepper_x:virtual_endstop" virtual pin
 #   which may be used as the stepper's endstop_pin. Doing this enables
 #   "sensorless homing". (Be sure to also set driver_SGT to an
 #   appropriate sensitivity value.) The default is to not enable
@@ -4023,6 +4824,7 @@ run_current:
 #driver_PWM_FREQ: 1
 #driver_PWM_GRAD: 14
 #driver_PWM_OFS: 36
+#driver_FREEWHEEL: 0
 #driver_SGTHRS: 0
 #   Set the given register during the configuration of both the TMC
 #   chip. This may be used to set custom motor parameters. The
@@ -4566,7 +5368,7 @@ thus they do not support the "menu" options or button configuration.
 # See the "display" section for available parameters.
 ```
 
-### [menu]
+### ⚠️ [menu]
 
 Customizable lcd display menus.
 
@@ -4588,15 +5390,21 @@ information on menu attributes available during template rendering.
 #[menu some_name]
 #type:
 #   One of command, input, list, text:
-#       command - basic menu element with various script triggers
-#       input   - same like 'command' but has value changing capabilities.
-#                 Press will start/stop edit mode.
-#       list    - it allows for menu items to be grouped together in a
-#                 scrollable list.  Add to the list by creating menu
-#                 configurations using "some_list" as a prefix - for
-#                 example: [menu some_list some_item_in_the_list]
-#       vsdlist - same as 'list' but will append files from virtual sdcard
-#                 (will be removed in the future)
+#       command      - basic menu element with various script triggers
+#       input        - same like 'command' but has value changing capabilities.
+#                      Press will start/stop edit mode.
+#       list         - it allows for menu items to be grouped together in a
+#                      scrollable list.  Add to the list by creating menu
+#                      configurations using "some_list" as a prefix - for
+#                      example: [menu some_list some_item_in_the_list]
+#       vsdlist      - same as 'list' but will append files from virtual sdcard
+#                      (deprecated, will be removed in the future)
+#    ⚠️ file_browser - Extended SD Card browser, supporting directories and
+#                      sorting. (replaces vsdlist)
+#    ⚠️ dialog       - Menu Dialogs, a list of inputs with a final choice to
+#                      confirm or cancel. Used for more complex scenarios like
+#                      PID/MPC calibration where you may want to set multiple
+#                      values for a single command
 #name:
 #   Name of menu item - evaluated as a template.
 #enable:
@@ -4608,6 +5416,14 @@ information on menu attributes available during template rendering.
 #[menu some_list]
 #type: list
 #name:
+#enable:
+#   See above for a description of these parameters.
+
+#[menu sdcard]
+#type: file_browser
+#name:
+#sort_by:
+#   `last_modified` (default) or `name`
 #enable:
 #   See above for a description of these parameters.
 
@@ -4644,6 +5460,22 @@ information on menu attributes available during template rendering.
 #   Script to run on button click, long click or value change.
 #   Evaluated as a template. The button click will trigger the edit
 #   mode start or end.
+
+#[menu neopixel]
+#type: dialog
+#name:
+#enable:
+#   See above for a description of these parameters.
+#title:
+#   An optional title to display at the top of the dialog. `name` will
+#   used if not set
+#confirm_text:
+#cancel_text
+#   Templates for the confirmation and cancel options
+#gcode:
+#   G-Code to run on confirmation. The dialog will be closed on
+#   confirmation. `{menu.exit()}` may be used to close the menu
+#   instead.
 ```
 
 ## Filament sensors
@@ -4668,11 +5500,22 @@ more information.
 #   detected. See docs/Command_Templates.md for G-Code format. If
 #   pause_on_runout is set to True this G-Code will run after the
 #   PAUSE is complete. The default is not to run any G-Code commands.
+#immediate_runout_gcode:
+#   A list of G-Code commands to execute immediately after a filament
+#   runout is detected and runout_distance is greater than 0.
+#   See docs/Command_Templates.md for G-Code format.
 #insert_gcode:
 #   A list of G-Code commands to execute after a filament insert is
 #   detected. See docs/Command_Templates.md for G-Code format. The
 #   default is not to run any G-Code commands, which disables insert
 #   detection.
+#runout_distance: 0.0
+#   Defines how much filament can still be pulled after the
+#   switch sensor triggered (e.g. you have a 60cm reverse bowden between your
+#   extruder and your sensor, you would then set runout_distance to something
+#   like 590 to leave a small safety margin and now the print will not
+#   immediately pause when the sensor triggers but rather keep printing until
+#   the filament is at the extruder). The default is 0 millimeters.
 #event_delay: 3.0
 #   The minimum amount of time in seconds to delay between events.
 #   Events triggered during this time period will be silently
@@ -4685,6 +5528,17 @@ more information.
 #switch_pin:
 #   The pin on which the switch is connected. This parameter must be
 #   provided.
+#smart:
+#   If set to true the sensor will use the virtual_sd_card module to determine
+#   whether the printer is printing which is more reliable but will not work
+#   when streaming a print over usb or similar.
+#always_fire_events:
+#   If set to true, runout events will always fire no matter whether the sensor
+#   is enabled or disabled. Usefull for MMUs
+#check_on_print_start:
+#   If set to true, the sensor will be reevaluated when a print starts and if
+#   no filament is detected the runout_gcode will be run no matter the defined
+#   runout_distance(immediate_runout_gcode will not be run in this case)
 ```
 
 ### [filament_motion_sensor]
@@ -4711,6 +5565,8 @@ switch_pin:
 #insert_gcode:
 #event_delay:
 #pause_delay:
+#smart:
+#always_fire_events:
 #   See the "filament_switch_sensor" section for a description of the
 #   above parameters.
 ```
@@ -4770,7 +5626,7 @@ adc2:
 #   The approximate distance (in mm) between sensor readings. The
 #   default is 10mm.
 #logging: False
-#   Out diameter to terminal and klipper.log can be turn on|of by
+#   Out diameter to terminal and klippy.log can be turn on|of by
 #   command.
 #min_diameter: 1.0
 #   Minimal diameter for trigger virtual filament_switch_sensor.
@@ -4781,24 +5637,73 @@ adc2:
 #   Use the current diameter instead of the nominal diameter while
 #   the measurement delay has not run through.
 #pause_on_runout:
+#immediate_runout_gcode:
 #runout_gcode:
 #insert_gcode:
 #event_delay:
 #pause_delay:
+#smart:
+#always_fire_events:
+#check_on_print_start:
 #   See the "filament_switch_sensor" section for a description of the
 #   above parameters.
 ```
 
-## Load Cells
+### [belay]
 
+Belay extruder sync sensors (one may define any number of sections
+with a "belay" prefix).
+
+```
+[belay my_belay]
+extruder_type:
+#   The type of secondary extruder. Available choices are 'trad_rack'
+#   or 'extruder_stepper'. This parameter must be specified.
+extruder_stepper_name:
+#   The name of the extruder_stepper being used as the secondary
+#   extruder. Must be specified if extruder_type is set to
+#   'extruder_stepper', but should not be specified otherwise. For
+#   example, if the config section for the secondary extruder is
+#   [extruder_stepper my_extruder_stepper], this parameter's value
+#   would be 'my_extruder_stepper'.
+sensor_pin:
+#   Input pin connected to the sensor. This parameter must be
+#   provided.
+#multiplier_high: 1.05
+#   High multiplier to set for the secondary extruder when extruding
+#   forward and Belay is compressed or when extruding backward and
+#   Belay is expanded. The default is 1.05.
+#multiplier_low: 0.95
+#   Low multiplier to set for the secondary extruder when extruding
+#   forward and Belay is expanded or when extruding backward and
+#   Belay is compressed. The default is 0.95.
+#debug_level: 0
+#   Controls messages sent to the console. If set to 0, no messages
+#   will be sent. If set to 1, multiplier resets will be reported, and
+#   the multiplier will be reported whenever it is set in response to
+#   a switch state change. If set to 2, the behavior is the same as 1
+#   but with an additional message whenever the multiplier is set in
+#   response to detecting an extrusion direction change. The default
+#   is 0.
+```
+## Load Cells
 ### [load_cell]
 Load Cell. Uses an ADC sensor attached to a load cell to create a digital
 scale.
-
 ```
 [load_cell]
 sensor_type:
 #   This must be one of the supported sensor types, see below.
+#counts_per_gram:
+#   The floating point number of sensor counts that indicates 1 gram of force.
+#   This value is calculated by the LOAD_CELL_CALIBRATE command.
+#reference_tare_counts:
+#   The integer tare value, in raw sensor counts, taken when LOAD_CELL_CALIBRATE
+#   is run. This is the default tare value when klipper starts up.
+#sensor_orientation:
+#   Change the sensor's orientation. Can be either 'normal' or 'inverted'.
+#   The default is 'normal'. Use 'inverted' if the sensor reports a
+#   decreasing force value when placed under load.
 ```
 
 #### HX711
@@ -4895,6 +5800,7 @@ data_ready_pin:
 #   and 'analog_supply'. Default is 'internal'.
 ```
 
+
 ## Board specific hardware support
 
 ### [sx1509]
@@ -4981,50 +5887,6 @@ vssa_pin:
 #   noise. The default is 2 seconds.
 ```
 
-### [ads1x1x]
-
-ADS1013, ADS1014, ADS1015, ADS1113, ADS1114 and ADS1115 are I2C based Analog to
-Digital Converters that can be used for temperature sensors. They provide 4
-analog input pins either as single line or as differential input.
-
-Note: Use caution if using this sensor to control heaters. The heater min_temp
-and max_temp are only verified in the host and only if the host is running and
-operating normally. (ADC inputs directly connected to the micro-controller
-verify min_temp and max_temp within the micro-controller and do not require a
-working connection to the host.)
-
-```
-[ads1x1x my_ads1x1x]
-chip: ADS1115
-#pga: 4.096V
-#   Default value is 4.096V. The maximum voltage range used for the input. This
-#   scales all values read from the ADC. Options are: 6.144V, 4.096V, 2.048V,
-#   1.024V, 0.512V, 0.256V
-#adc_voltage: 3.3
-#   The suppy voltage for the device. This allows additional software scaling
-#   for all values read from the ADC.
-i2c_mcu: host
-i2c_bus: i2c.1
-#address_pin: GND
-#   Default value is GND.  There can be up to four addressed devices depending
-#   upon wiring of the device. Check the datasheet for details. The i2c_address
-#   can be specified directly instead of using the address_pin.
-```
-
-The chip provides pins that can be used on other sensors.
-
-```
-sensor_type: ...
-#   Can be any thermistor or adc_temperature.
-sensor_pin: my_ads1x1x:AIN0
-#   A combination of the name of the ads1x1x chip and the pin. Possible
-#   pin values are AIN0, AIN1, AIN2 and AIN3 for single ended lines and
-#   DIFF01, DIFF03, DIFF13 and DIFF23 for differential between their
-#   correspoding lines. For example
-#   DIFF03 measures the differential between line 0 and 3. Only specific
-#   combinations for the differentials are allowed.
-```
-
 ### [replicape]
 
 Replicape support - see the [beaglebone guide](Beaglebone.md) and the
@@ -5045,7 +5907,7 @@ revision:
 #   P9_41).
 host_mcu:
 #   The name of the mcu config section that communicates with the
-#   Klipper "linux process" mcu instance. This parameter must be
+#   Kalico "linux process" mcu instance. This parameter must be
 #   provided.
 #standstill_power_down: False
 #   This parameter controls the CFG6_ENN line on all stepper
@@ -5106,8 +5968,8 @@ Octoprint as they will conflict, and 1 will fail to initialize
 properly likely aborting your print.
 
 If you use Octoprint and stream gcode over the serial port instead of
-printing from virtual_sd, then remove **M1** and **M0** from *Pausing commands*
-in *Settings > Serial Connection > Firmware & protocol* will prevent
+printing from virtual_sd, then remove **M1** and **M0** from _Pausing commands_
+in _Settings > Serial Connection > Firmware & protocol_ will prevent
 the need to start print on the Palette 2 and unpausing in Octoprint
 for your print to begin.
 
@@ -5162,6 +6024,283 @@ cs_pin:
 #   above parameters.
 ```
 
+### ⚠️ [tools_calibrate]
+
+Multi-toolhead nozzle offset calibration, using a 3-axis nozzle contact probe such as
+[Zruncho3D's Nudge Probe](https://github.com/zruncho3d/nudge).
+
+```
+[tools_calibrate]
+pin:
+travel_speed: 20
+#   X and Y travel speed in mm/sec
+spread: 5
+#spread_x:
+#spread_y:
+#   X and Y travel distance around the probe
+#initial_spread:
+#initial_spread_x:
+#initial_spread_y:
+#   X and Y travel distance for the initial probe locating moves
+lower_z: 1.0
+#   Distance to lower in Z for contact with the sides of the probe
+speed: 2
+#   The speed (in mm/sec) to retract between probes
+lift_speed: 4
+#   Z Lift speed after probing
+final_lift_z: 6
+#   Z lift distance after calibration, must be greater than any
+#   height variance between tools
+trigger_to_bottom_z: 0.25
+#   Offset from probe trigger to vertical motion bottoms out.
+#   decrease if the nozzle is too high, increase if too low.
+#samples: 1
+#   The number of times to probe each point. The probed z-values will
+#   be averaged. The default is to probe 1 time.
+#sample_retract_dist: 2.0
+#   The distance (in mm) to lift the toolhead between each sample (if
+#   sampling more than once). The default is 2mm.
+#samples_result: average
+#   The calculation method when sampling more than once - either
+#   "median" or "average". The default is average.
+#samples_tolerance: 0.100
+#   The maximum Z distance (in mm) that a sample may differ from other
+#   samples. If this tolerance is exceeded then either an error is
+#   reported or the attempt is restarted (see
+#   samples_tolerance_retries). The default is 0.100mm.
+```
+
+### [trad_rack]
+
+Trad Rack multimaterial system support. See the following documents from the
+TradRack repo for additional information:
+- [Tuning.md](https://github.com/Annex-Engineering/TradRack/blob/main/docs/Tuning.md):
+  document referenced by some of the config options below.
+- [Trad Rack config reference document](https://github.com/Annex-Engineering/TradRack/blob/main/docs/kalico/Config_Reference.md): contains info on additional config
+  sections that are expected to be used alongside [trad_rack].
+
+```
+[trad_rack]
+selector_max_velocity:
+#   Maximum velocity (in mm/s) of the selector.
+#   This parameter must be specified.
+selector_max_accel:
+#   Maximum acceleration (in mm/s^2) of the selector.
+#   This parameter must be specified.
+#filament_max_velocity:
+#   Maximum velocity (in mm/s) for filament movement.
+#   Defaults to buffer_pull_speed.
+#filament_max_accel: 1500.0
+#   Maximum acceleration (in mm/s^2) for filament movement.
+#   The default is 1500.0.
+toolhead_fil_sensor_pin:
+#   The pin on which the toolhead filament sensor is connected.
+#   If a pin is not specified, no toolhead filament sensor will
+#   be used.
+lane_count:
+#   The number of filament lanes. This parameter must be specified.
+lane_spacing:
+#   Spacing (in mm) between filament lanes.
+#   This parameter must be specified.
+#lane_offset_<lane index>:
+#   Options with a "lane_offset_" prefix may be specified for any of
+#   the lanes (from 0 to lane_count - 1). The option will apply an
+#   offset (in mm) to the corresponding lane's position. Lane offsets
+#   do not affect the position of any lanes besides the one specified
+#   in the option name. This option is intended for fine adjustment
+#   of each lane's position to ensure that the filament paths in the
+#   lane module and selector line up with each other.
+#   The default is 0.0 for each lane.
+#lane_spacing_mod_<lane index>:
+#   Options with a "lane_spacing_mod_" prefix may be specified for any
+#   of the lanes (from 0 to lane_count - 1). The option will apply an
+#   offset (in mm) to the corresponding lane's position, as well as
+#   any lane with a higher index. For example, if lane_spacing_mod_2
+#   is 4.0, any lane with an index of 2 or above will have its
+#   position increased by 4.0. This option is intended to account for
+#   variations in a lane module that will affect its position as well
+#   as the positions of any subsequent modules with a higher index.
+#   The default is 0.0 for each lane.
+servo_down_angle:
+#   The angle (in degrees) for the servo's down position.
+#   This parameter must be specified.
+servo_up_angle:
+#   The angle (in degrees) for the servo's up position.
+#   This parameter must be specified.
+#servo_wait_ms: 500
+#   Time (in milliseconds) to wait for the servo to complete moves
+#   between the up and down angles. The default is 500.
+selector_unload_length:
+#   Length (in mm) to retract a piece of filament out of the selector
+#   and back into the lane module after the selector sensor has been
+#   triggered or untriggered. This parameter must be specified.
+#selector_unload_length_extra: 0.0
+#   Extra length (in mm) that is added to selector_unload_length when
+#   retracting a piece of filament out of the selector and back into
+#   the lane module. After the retraction, the filament is moved
+#   forward by this length as well (so this option's value has no
+#   effect on the final position of the filament). This option may be
+#   useful when using Trad Rack with a motorized spool rewinder that
+#   senses tension or compression in the filament between the spool
+#   and Trad Rack in order to determine when to rotate the spool. The
+#   extra forward movement of the filament after retracting is
+#   intended to force the rewinder's sensor to detect tension in the
+#   filament, causing rewinding to cease immediately so the filament
+#   tip is not moved out of position by excess spool movement. The
+#   default is 0.0.
+#eject_length: 10.0
+#   Length (in mm) to eject the filament into the lane module past the
+#   length defined by selector_unload_length. The filament is ejected
+#   whenever unloading a depleted spool after a runout to make sure
+#   that filament segment is not loaded again until it has been
+#   replaced.
+bowden_length:
+#   Length (in mm) to quickly move filament through the bowden tube
+#   between Trad Rack and the toolhead during loads and unloads.
+#   See Tuning.md for details. This parameter must be specified.
+extruder_load_length:
+#   Length (in mm) to move filament into the extruder when loading the
+#   toolhead. See Tuning.md for details.
+#   This parameter must be specified.
+hotend_load_length:
+#   Length (in mm) to move filament into the hotend when loading the
+#   toolhead. See Tuning.md for details.
+#   This parameter must be specified.
+toolhead_unload_length:
+#   Length (in mm) to move filament out of the toolhead during an
+#   unload. See Tuning.md for details. If toolhead_fil_sensor_pin is
+#   specified, this parameter must be specified.
+#   If toolhead_fil_sensor_pin is not specified, the default is
+#   extruder_load_length + hotend_load_length.
+#selector_sense_speed: 40.0
+#   Speed (in mm/s) when moving filament until the selector
+#   sensor is triggered or untriggered. See Tuning.md for details
+#   on when this speed is applied. The default is 40.0.
+#selector_unload_speed: 60.0
+#   Speed (in mm/s) to move filament when unloading the selector.
+#   The default is 60.0.
+#eject_speed: 80.0
+#   Speed (in mm/s) to move the filament when ejecting a filament
+#   segment into the lane module.
+#spool_pull_speed: 100.0
+#   Speed (in mm/s) to move filament through the bowden tube when
+#   loading from a spool. See Tuning.md for details.
+#   The default is 100.0.
+#buffer_pull_speed:
+#   Speed (in mm/s) to move filament through the bowden tube when
+#   unloading or loading from a buffer. See Tuning.md for details.
+#   Defaults to spool_pull_speed.
+#toolhead_sense_speed:
+#   Speed (in mm/s) when moving filament until the toolhead
+#   sensor is triggered or untriggered. See Tuning.md for details on
+#   when this speed is applied. Defaults to selector_sense_speed.
+#extruder_load_speed:
+#   Speed (in mm/s) to move filament into the extruder when loading
+#   the toolhead. See Tuning.md for details. The default is 60.0.
+#hotend_load_speed:
+#   Speed (in mm/s) to move filament into the hotend when loading the
+#   toolhead. See Tuning.md for details. The default is 7.0.
+#toolhead_unload_speed:
+#   Speed (in mm/s) to move filament when unloading the toolhead.
+#   See Tuning.md for details. Defaults to extruder_load_speed.
+#load_with_toolhead_sensor: True
+#   Whether to use the toolhead sensor when loading the toolhead.
+#   See Tuning.md for details. Defaults to True but is ignored if
+#   toolhead_fil_sensor_pin is not specified.
+#unload_with_toolhead_sensor: True
+#   Whether to use the toolhead sensor when unloading the toolhead.
+#   See Tuning.md for details. Defaults to True but is ignored if
+#   toolhead_fil_sensor_pin is not specified.
+#fil_homing_retract_dist: 20.0
+#   Distance (in mm) to retract filament away from a filament sensor
+#   before moving on to the next move. This retraction occurs whenever
+#   a filament sensor is triggered early during a fast move through
+#   the bowden tube. See Tuning.md for details. The default is 20.0.
+#target_toolhead_homing_dist:
+#   Target filament travel distance (in mm) when homing to the
+#   toolhead filament sensor during a load. See Tuning.md for details.
+#   Defaults to either 10.0 or toolhead_unload_length, whichever is
+#   greater.
+#target_selector_homing_dist:
+#   Target filament travel distance (in mm) when homing to the
+#   selector filament sensor during an unload. See Tuning.md for
+#   details. The default is 10.0.
+#bowden_length_samples: 10
+#   Maximum number of samples that are averaged to set bowden lengths
+#   for loading and unloading. See Tuning.md for details. The default
+#   is 10.
+#load_lane_time: 15
+#   Approximate maximum time (in seconds) to wait for filament to
+#   reach the selector filament sensor when loading a lane with the
+#   TR_LOAD_LANE gcode command. This time starts when the user is
+#   prompted to insert filament and determines when the command will
+#   be halted early if no filament is detected. The default is 15.
+#load_selector_homing_dist:
+#   Maximum distance to try to move filament when loading from a lane
+#   module to the selector filament sensor before halting the homing
+#   move. This value is not used by the TR_LOAD_LANE command but is
+#   used in similar scenarios that do not involve user interaction.
+#   Defaults to selector_unload_length * 2.
+#bowden_load_homing_dist:
+#   Maximum distance to try to move filament near the end of a
+#   toolhead load (during the slow homing move to the toolhead sensor)
+#   before halting the homing move. Defaults to bowden_length.
+#bowden_unload_homing_dist:
+#   Maximum distance to try to move filament near the end of a
+#   toolhead unload (during the slow homing move to the selector
+#   sensor) before halting the homing move. Defaults to bowden_length.
+#unload_toolhead_homing_dist:
+#   Maximum distance to try to move filament near the beginning of a
+#   toolhead unload (during the homing move to the toolhead sensor)
+#   before halting the homing move.
+#   Defaults to (extruder_load_length + hotend_load_length) * 2.
+#sync_to_extruder: False
+#   Syncs Trad Rack's filament driver to the extruder during printing,
+#   as well as during any extrusion moves within toolhead loading or
+#   unloading that would normally involve only the extruder.
+#   The default is False.
+#user_wait_time: 15
+#   Time (in seconds) to wait for the user to take an action
+#   before continuing automatically. If set to -1, Trad Rack will wait
+#   for the user indefinitely. This value is currently used by the
+#   TR_LOCATE_SELECTOR gcode command. The default is 15.
+#register_toolchange_commands: True
+#   Whether to register gcode commands T0, T1, T2, etc. so that they
+#   can be used to initiate toolchanges with Trad Rack. If set to
+#   False, the TR_LOAD_TOOLHEAD command can still be used as a
+#   substitute to initiate toolchanges. The default is True.
+#save_active_lane: True
+#   Whether to save the active lane to disk whenever it is set using
+#   save_variables. If set to True, the TR_LOCATE_SELECTOR gcode
+#   command will infer the active lane if the selector filament sensor
+#   is triggered and an active lane was saved previously.
+#   The default is True.
+#log_bowden_lengths: False
+#   Whether to log bowden load length data and bowden unload length
+#   data (to ~/bowden_load_lengths.csv and ~/bowden_unload_lengths.csv
+#   respectively). The default is False.
+#pre_unload_gcode:
+#   Gcode command template that is run before the toolhead is
+#   unloaded. The default is to run no extra commands.
+#post_unload_gcode:
+#   Gcode command template that is run after the toolhead is
+#   unloaded. The default is to run no extra commands.
+#pre_load_gcode:
+#   Gcode command template that is run before the toolhead is
+#   loaded. The default is to run no extra commands.
+#post_load_gcode:
+#   Gcode command template that is run after the toolhead is
+#   loaded. The default is to run no extra commands.
+#pause_gcode:
+#   Gcode command template that is run whenever Trad Rack needs to
+#   pause the print (usually due to a failed load or unload). The
+#   default is to run the PAUSE gcode command.
+#resume_gcode:
+#   Gcode command template that is run whenever the TR_RESUME command
+#   needs to resume the print. The default is to run the RESUME
+#   gcode command.
+```
+
 ## Common bus parameters
 
 ### Common SPI settings
@@ -5191,21 +6330,21 @@ SPI bus.
 The following parameters are generally available for devices using an
 I2C bus.
 
-Note that Klipper's current micro-controller support for I2C is
+Note that Kalico's current micro-controller support for I2C is
 generally not tolerant to line noise. Unexpected errors on the I2C
-wires may result in Klipper raising a run-time error. Klipper's
+wires may result in Kalico raising a run-time error. Kalico's
 support for error recovery varies between each micro-controller type.
 It is generally recommended to only use I2C devices that are on the
 same printed circuit board as the micro-controller.
 
-Most Klipper micro-controller implementations only support an
-`i2c_speed` of 100000 (*standard mode*, 100kbit/s). The Klipper "Linux"
-micro-controller supports a 400000 speed (*fast mode*, 400kbit/s), but it must be
+Most Kalico micro-controller implementations only support an
+`i2c_speed` of 100000 (_standard mode_, 100kbit/s). The Kalico "Linux"
+micro-controller supports a 400000 speed (_fast mode_, 400kbit/s), but it must be
 [set in the operating system](RPi_microcontroller.md#optional-enabling-i2c)
-and the `i2c_speed` parameter is otherwise ignored. The Klipper
+and the `i2c_speed` parameter is otherwise ignored. The Kalico
 "RP2040" micro-controller and ATmega AVR family and some STM32
 (F0, G0, G4, L4, F7, H7) support a rate of 400000 via the `i2c_speed` parameter.
-All other Klipper micro-controllers use a
+All other Kalico micro-controllers use a
 100000 rate and ignore the `i2c_speed` parameter.
 
 ```
@@ -5228,7 +6367,7 @@ All other Klipper micro-controllers use a
 #   i2c_bus parameter.
 #i2c_speed:
 #   The I2C speed (in Hz) to use when communicating with the device.
-#   The Klipper implementation on most micro-controllers is hard-coded
+#   The Kalico implementation on most micro-controllers is hard-coded
 #   to 100000 and changing this value has no effect. The default is
 #   100000. Linux, RP2040 and ATmega support 400000.
 ```
