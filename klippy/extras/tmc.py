@@ -267,7 +267,9 @@ class TMCErrorCheck:
 
 
 class TMCCommandHelper:
-    def __init__(self, config, mcu_tmc, current_helper):
+    def __init__(
+        self, config, mcu_tmc, current_helper, readable_registers=True
+    ):
         self.printer = config.get_printer()
         self.stepper_name = " ".join(config.get_name().split()[1:])
         self.name = config.get_name().split()[-1]
@@ -276,6 +278,7 @@ class TMCCommandHelper:
         self.echeck_helper = TMCErrorCheck(config, mcu_tmc)
         self.fields = mcu_tmc.get_fields()
         self.read_registers = self.read_translate = None
+        self.readable_registers = readable_registers
         self.toff = None
         self.mcu_phase_offset = None
         self.stepper = None
@@ -430,6 +433,8 @@ class TMCCommandHelper:
     def _handle_sync_mcu_pos(self, stepper):
         if stepper.get_name() != self.stepper_name:
             return
+        if not self.readable_registers:
+            return
         try:
             driver_phase = self._query_phase()
         except self.printer.command_error as e:
@@ -460,6 +465,8 @@ class TMCCommandHelper:
                 # Shared enable via comms handling
                 self.fields.set_field("toff", self.toff)
             self._init_registers()
+            if not self.readable_registers:
+                return
             did_reset = self.echeck_helper.start_checks()
             if did_reset:
                 self.mcu_phase_offset = None
@@ -485,7 +492,8 @@ class TMCCommandHelper:
                 val = self.fields.set_field("toff", 0)
                 reg_name = self.fields.lookup_register("toff")
                 self.mcu_tmc.set_register(reg_name, val, print_time)
-            self.echeck_helper.stop_checks()
+            if self.readable_registers:
+                self.echeck_helper.stop_checks()
         except self.printer.command_error as e:
             self.printer.invoke_shutdown(str(e))
 
@@ -541,7 +549,11 @@ class TMCCommandHelper:
     # get_status information export
     def get_status(self, eventtime=None):
         cpos = None
-        if self.stepper is not None and self.mcu_phase_offset is not None:
+        if (
+            self.readable_registers
+            and self.stepper is not None
+            and self.mcu_phase_offset is not None
+        ):
             cpos = self.stepper.mcu_to_commanded_position(self.mcu_phase_offset)
         current = self.current_helper.get_current()
         res = {
@@ -574,7 +586,10 @@ class TMCCommandHelper:
         if reg_name is not None:
             reg_name = reg_name.upper()
             val = self.fields.registers.get(reg_name)
-            if (val is not None) and (reg_name not in self.read_registers):
+            use_cached = self.readable_registers or (
+                reg_name not in self.read_registers
+            )
+            if (val is not None) and use_cached:
                 # write-only register
                 gcmd.respond_info(self.fields.pretty_format(reg_name, val))
             elif reg_name in self.read_registers:
@@ -585,7 +600,7 @@ class TMCCommandHelper:
                 gcmd.respond_info(self.fields.pretty_format(reg_name, val))
             else:
                 raise gcmd.error("Unknown register name '%s'" % (reg_name))
-        else:
+        elif self.readable_registers:
             gcmd.respond_info("========== Write-only registers ==========")
             for reg_name, val in self.fields.registers.items():
                 if reg_name not in self.read_registers:
@@ -595,6 +610,10 @@ class TMCCommandHelper:
                 val = self.mcu_tmc.get_register(reg_name)
                 if self.read_translate is not None:
                     reg_name, val = self.read_translate(reg_name, val)
+                gcmd.respond_info(self.fields.pretty_format(reg_name, val))
+        else:
+            gcmd.respond_info("========== Cached registers ==========")
+            for reg_name, val in self.fields.registers.items():
                 gcmd.respond_info(self.fields.pretty_format(reg_name, val))
 
 

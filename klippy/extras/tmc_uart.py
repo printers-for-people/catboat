@@ -261,7 +261,15 @@ def lookup_tmc_uart_bitbang(config, max_addr):
 
 # Helper code for communicating via TMC uart
 class MCU_TMC_uart:
-    def __init__(self, config, name_to_reg, fields, max_addr, tmc_frequency):
+    def __init__(
+        self,
+        config,
+        name_to_reg,
+        fields,
+        max_addr,
+        tmc_frequency,
+        readable_registers=True,
+    ):
         self.printer = config.get_printer()
         self.name = config.get_name().split()[-1]
         self.name_to_reg = name_to_reg
@@ -273,6 +281,7 @@ class MCU_TMC_uart:
         self.mutex = self.mcu_uart.mutex
         self.tmc_frequency = tmc_frequency
         self.mcu = self.mcu_uart.mcu
+        self.readable_registers = readable_registers
 
     def get_fields(self):
         return self.fields
@@ -282,7 +291,9 @@ class MCU_TMC_uart:
         if self.printer.get_start_args().get("debugoutput") is not None:
             return 0
         for retry in range(5):
-            val = self.mcu_uart.reg_read(self.instance_id, self.addr, reg)
+            val = None
+            if self.readable_registers:
+                val = self.mcu_uart.reg_read(self.instance_id, self.addr, reg)
             if val is not None:
                 return val
         raise self.printer.command_error(
@@ -299,7 +310,13 @@ class MCU_TMC_uart:
             return
         with self.mutex:
             for retry in range(5):
-                ifcnt = self.ifcnt
+                if not self.readable_registers:
+                    # No way to check if things wrote, just hope for the best
+                    self.mcu_uart.reg_write(
+                        self.instance_id, self.addr, reg, val, print_time
+                    )
+                    continue
+                ifcnt = None
                 if ifcnt is None:
                     self.ifcnt = ifcnt = self._do_get_register("IFCNT")
                 self.mcu_uart.reg_write(
@@ -308,6 +325,8 @@ class MCU_TMC_uart:
                 self.ifcnt = self._do_get_register("IFCNT")
                 if self.ifcnt == (ifcnt + 1) & 0xFF:
                     return
+        if not self.readable_registers:
+            return  # Assume things went okay
         raise self.printer.command_error(
             "Unable to write tmc uart '%s' register %s" % (self.name, reg_name)
         )
