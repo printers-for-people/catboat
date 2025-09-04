@@ -274,13 +274,12 @@ class TMCTRIGORILLA:
         # Allow virtual pins to be created
         tmc.TMCVirtualPinHelper(config, self.mcu_tmc)
         # Register commands
-        current_helper = tmc2130.TMCCurrentHelper(config, self.mcu_tmc)
+        current_helper = tmc2130.TMC2130CurrentHelper(config, self.mcu_tmc)
         cmdhelper = TMCCommandHelperTrigorilla(config, self.mcu_tmc,
             current_helper)
         # Setup basic register values
         self.fields.set_field("mstep_reg_select", True)
-        tmc.TMCStealthchopHelper(config, self.mcu_tmc)
-        tmc.TMCVcoolthrsHelper(config, self.mcu_tmc)
+        tmc.TMCStealthchopHelper(config, self.mcu_tmc, TMC_FREQUENCY)
         # Allow other registers to be set from the config
         set_config_field = self.fields.set_config_field
         # GCONF
@@ -290,12 +289,6 @@ class TMCTRIGORILLA:
         set_config_field(config, "hstrt", 5)
         set_config_field(config, "hend", 0)
         set_config_field(config, "tbl", 2)
-        # COOLCONF
-        set_config_field(config, "semin", 0)
-        set_config_field(config, "seup", 0)
-        set_config_field(config, "semax", 0)
-        set_config_field(config, "sedn", 0)
-        set_config_field(config, "seimin", 0)
         # IHOLDIRUN
         set_config_field(config, "iholddelay", 8)
         # PWMCONF
@@ -304,6 +297,7 @@ class TMCTRIGORILLA:
         set_config_field(config, "pwm_freq", 1)
         set_config_field(config, "pwm_autoscale", True)
         set_config_field(config, "pwm_autograd", True)
+        set_config_field(config, "freewheel", 0)
         set_config_field(config, "pwm_reg", 8)
         set_config_field(config, "pwm_lim", 12)
         # TPOWERDOWN

@@ -4824,6 +4824,7 @@ run_current:
 #driver_PWM_FREQ: 1
 #driver_PWM_GRAD: 14
 #driver_PWM_OFS: 36
+#driver_FREEWHEEL: 0
 #driver_SGTHRS: 0
 #   Set the given register during the configuration of both the TMC
 #   chip. This may be used to set custom motor parameters. The
