@@ -29,96 +29,88 @@ import logging
 # - Reading diagnostics if the controller stops
 # - Checking for UART transmission failures
 
-TMC_FREQUENCY=12000000.
+TMC_FREQUENCY = 12000000.0
 
 Registers = {
-    "GCONF": 0x00, "IFCNT": 0x02, "SLAVECONF": 0x03, "FACTORY_CONF": 0x07,
-    "IHOLD_IRUN": 0x10, "TPOWERDOWN": 0x11, "TSTEP": 0x12, "TPWMTHRS": 0x13,
-    "TCOOLTHRS": 0x14, "VACTUAL": 0x22, "COOLCONF": 0x42, "SGTHRS": 0x40,
-    "CHOPCONF": 0x6c, "PWMCONF": 0x70
+    "GCONF": 0x00,
+    "IFCNT": 0x02,
+    "SLAVECONF": 0x03,
+    "FACTORY_CONF": 0x07,
+    "IHOLD_IRUN": 0x10,
+    "TPOWERDOWN": 0x11,
+    "TSTEP": 0x12,
+    "TPWMTHRS": 0x13,
+    "TCOOLTHRS": 0x14,
+    "VACTUAL": 0x22,
+    "COOLCONF": 0x42,
+    "SGTHRS": 0x40,
+    "CHOPCONF": 0x6C,
+    "PWMCONF": 0x70,
 }
 
 Fields = {}
 
 Fields["GCONF"] = {
-    "i_scale_analog":      0x01,
-    "internal_rsense":     0x01 << 1,
-    "en_spreadcycle":      0x01 << 2,
-    "shaft":               0x01 << 3,
-    "index_otpw":          0x01 << 4,
-    "index_step":          0x01 << 5,
-    "pdn_disable":         0x01 << 6,
-    "mstep_reg_select":    0x01 << 7,
-    "multistep_filt":      0x01 << 8,
-    "test_mode":           0x01 << 9
+    "i_scale_analog": 0x01,
+    "internal_rsense": 0x01 << 1,
+    "en_spreadcycle": 0x01 << 2,
+    "shaft": 0x01 << 3,
+    "index_otpw": 0x01 << 4,
+    "index_step": 0x01 << 5,
+    "pdn_disable": 0x01 << 6,
+    "mstep_reg_select": 0x01 << 7,
+    "multistep_filt": 0x01 << 8,
+    "test_mode": 0x01 << 9,
 }
-Fields["IFCNT"] = {
-    "ifcnt":               0xff
-}
-Fields["SLAVECONF"] = {
-    "senddelay":           0x0f << 8
-}
-Fields["FACTORY_CONF"] = {
-    "fclktrim":            0x1f,
-    "ottrim":              0x03 << 8
-}
+Fields["IFCNT"] = {"ifcnt": 0xFF}
+Fields["SLAVECONF"] = {"senddelay": 0x0F << 8}
+Fields["FACTORY_CONF"] = {"fclktrim": 0x1F, "ottrim": 0x03 << 8}
 Fields["IHOLD_IRUN"] = {
-    "ihold":               0x1f,
-    "irun":                0x1f << 8,
-    "iholddelay":          0x0f << 16
+    "ihold": 0x1F,
+    "irun": 0x1F << 8,
+    "iholddelay": 0x0F << 16,
 }
-Fields["TPOWERDOWN"] = {
-    "tpowerdown":          0xff
-}
-Fields["TSTEP"] = {
-    "tstep":               0xfffff
-}
-Fields["TPWMTHRS"] = {
-    "tpwmthrs":            0xfffff
-}
-Fields["VACTUAL"] = {
-    "vactual":             0xffffff
-}
+Fields["TPOWERDOWN"] = {"tpowerdown": 0xFF}
+Fields["TSTEP"] = {"tstep": 0xFFFFF}
+Fields["TPWMTHRS"] = {"tpwmthrs": 0xFFFFF}
+Fields["VACTUAL"] = {"vactual": 0xFFFFFF}
 Fields["CHOPCONF"] = {
-    "toff":                0x0f,
-    "hstrt":               0x07 << 4,
-    "hend":                0x0f << 7,
-    "tbl":                 0x03 << 15,
-    "vsense":              0x01 << 17,
-    "mres":                0x0f << 24,
-    "intpol":              0x01 << 28,
-    "dedge":               0x01 << 29,
-    "diss2g":              0x01 << 30,
-    "diss2vs":             0x01 << 31
+    "toff": 0x0F,
+    "hstrt": 0x07 << 4,
+    "hend": 0x0F << 7,
+    "tbl": 0x03 << 15,
+    "vsense": 0x01 << 17,
+    "mres": 0x0F << 24,
+    "intpol": 0x01 << 28,
+    "dedge": 0x01 << 29,
+    "diss2g": 0x01 << 30,
+    "diss2vs": 0x01 << 31,
 }
 Fields["PWMCONF"] = {
-    "pwm_ofs":             0xff,
-    "pwm_grad":            0xff << 8,
-    "pwm_freq":            0x03 << 16,
-    "pwm_autoscale":       0x01 << 18,
-    "pwm_autograd":        0x01 << 19,
-    "freewheel":           0x03 << 20,
-    "pwm_reg":             0xf << 24,
-    "pwm_lim":             0xf << 28
+    "pwm_ofs": 0xFF,
+    "pwm_grad": 0xFF << 8,
+    "pwm_freq": 0x03 << 16,
+    "pwm_autoscale": 0x01 << 18,
+    "pwm_autograd": 0x01 << 19,
+    "freewheel": 0x03 << 20,
+    "pwm_reg": 0xF << 24,
+    "pwm_lim": 0xF << 28,
 }
 Fields["COOLCONF"] = {
-    "semin":        0x0F << 0,
-    "seup":         0x03 << 5,
-    "semax":        0x0F << 8,
-    "sedn":         0x03 << 13,
-    "seimin":       0x01 << 15
+    "semin": 0x0F << 0,
+    "seup": 0x03 << 5,
+    "semax": 0x0F << 8,
+    "sedn": 0x03 << 13,
+    "seimin": 0x01 << 15,
 }
-Fields["SGTHRS"] = {
-    "sgthrs":       0xFF << 0
-}
-Fields["TCOOLTHRS"] = {
-    "tcoolthrs": 0xfffff
-}
+Fields["SGTHRS"] = {"sgthrs": 0xFF << 0}
+Fields["TCOOLTHRS"] = {"tcoolthrs": 0xFFFFF}
+
 
 class TMCCommandHelperTrigorilla:
     def __init__(self, config, mcu_tmc, current_helper):
         self.printer = config.get_printer()
-        self.stepper_name = ' '.join(config.get_name().split()[1:])
+        self.stepper_name = " ".join(config.get_name().split()[1:])
         self.name = config.get_name().split()[-1]
         self.mcu_tmc = mcu_tmc
         self.current_helper = current_helper
@@ -126,41 +118,60 @@ class TMCCommandHelperTrigorilla:
         self.toff = None
         self.mcu_phase_offset = None
         self.stepper = None
-        self.printer.register_event_handler("klippy:mcu_identify",
-                                            self._handle_mcu_identify)
-        self.printer.register_event_handler("klippy:connect",
-                                            self._handle_connect)
+        self.printer.register_event_handler(
+            "klippy:mcu_identify", self._handle_mcu_identify
+        )
+        self.printer.register_event_handler(
+            "klippy:connect", self._handle_connect
+        )
         # Set microstep config options
         tmc.TMCMicrostepHelper(config, mcu_tmc)
         # Register commands
         gcode = self.printer.lookup_object("gcode")
-        gcode.register_mux_command("SET_TMC_FIELD", "STEPPER", self.name,
-                                   self.cmd_SET_TMC_FIELD,
-                                   desc=self.cmd_SET_TMC_FIELD_help)
-        gcode.register_mux_command("INIT_TMC", "STEPPER", self.name,
-                                   self.cmd_INIT_TMC,
-                                   desc=self.cmd_INIT_TMC_help)
-        gcode.register_mux_command("SET_TMC_CURRENT", "STEPPER", self.name,
-                                   self.cmd_SET_TMC_CURRENT,
-                                   desc=self.cmd_SET_TMC_CURRENT_help)
+        gcode.register_mux_command(
+            "SET_TMC_FIELD",
+            "STEPPER",
+            self.name,
+            self.cmd_SET_TMC_FIELD,
+            desc=self.cmd_SET_TMC_FIELD_help,
+        )
+        gcode.register_mux_command(
+            "INIT_TMC",
+            "STEPPER",
+            self.name,
+            self.cmd_INIT_TMC,
+            desc=self.cmd_INIT_TMC_help,
+        )
+        gcode.register_mux_command(
+            "SET_TMC_CURRENT",
+            "STEPPER",
+            self.name,
+            self.cmd_SET_TMC_CURRENT,
+            desc=self.cmd_SET_TMC_CURRENT_help,
+        )
+
     def _init_registers(self, print_time=None):
         # Send registers
         for reg_name in list(self.fields.registers.keys()):
-            val = self.fields.registers[reg_name] # Val may change during loop
+            val = self.fields.registers[reg_name]  # Val may change during loop
             self.mcu_tmc.set_register(reg_name, val, print_time)
+
     cmd_INIT_TMC_help = "Initialize TMC stepper driver registers"
+
     def cmd_INIT_TMC(self, gcmd):
         logging.info("INIT_TMC %s", self.name)
-        print_time = self.printer.lookup_object('toolhead').get_last_move_time()
+        print_time = self.printer.lookup_object("toolhead").get_last_move_time()
         self._init_registers(print_time)
+
     cmd_SET_TMC_FIELD_help = "Set a register field of a TMC driver"
+
     def cmd_SET_TMC_FIELD(self, gcmd):
-        field_name = gcmd.get('FIELD').lower()
+        field_name = gcmd.get("FIELD").lower()
         reg_name = self.fields.lookup_register(field_name, None)
         if reg_name is None:
             raise gcmd.error("Unknown field name '%s'" % (field_name,))
-        value = gcmd.get_int('VALUE', None)
-        velocity = gcmd.get_float('VELOCITY', None, minval=0.)
+        value = gcmd.get_int("VALUE", None)
+        velocity = gcmd.get_float("VELOCITY", None, minval=0.0)
         tmc_frequency = self.mcu_tmc.get_tmc_frequency()
         if tmc_frequency is None and velocity is not None:
             raise gcmd.error("VELOCITY parameter not supported by this driver")
@@ -169,24 +180,28 @@ class TMCCommandHelperTrigorilla:
         if velocity is not None:
             step_dist = self.stepper.get_step_dist()
             mres = self.fields.get_field("mres")
-            value = tmc.TMCtstepHelper(step_dist, mres, tmc_frequency,
-                                   velocity)
+            value = tmc.TMCtstepHelper(step_dist, mres, tmc_frequency, velocity)
         reg_val = self.fields.set_field(field_name, value)
-        print_time = self.printer.lookup_object('toolhead').get_last_move_time()
+        print_time = self.printer.lookup_object("toolhead").get_last_move_time()
         self.mcu_tmc.set_register(reg_name, reg_val, print_time)
+
     cmd_SET_TMC_CURRENT_help = "Set the current of a TMC driver"
+
     def cmd_SET_TMC_CURRENT(self, gcmd):
         ch = self.current_helper
         prev_cur, prev_hold_cur, req_hold_cur, max_cur = ch.get_current()
-        run_current = gcmd.get_float('CURRENT', None, minval=0., maxval=max_cur)
-        hold_current = gcmd.get_float('HOLDCURRENT', None,
-                                      above=0., maxval=max_cur)
+        run_current = gcmd.get_float(
+            "CURRENT", None, minval=0.0, maxval=max_cur
+        )
+        hold_current = gcmd.get_float(
+            "HOLDCURRENT", None, above=0.0, maxval=max_cur
+        )
         if run_current is not None or hold_current is not None:
             if run_current is None:
                 run_current = prev_cur
             if hold_current is None:
                 hold_current = req_hold_cur
-            toolhead = self.printer.lookup_object('toolhead')
+            toolhead = self.printer.lookup_object("toolhead")
             print_time = toolhead.get_last_move_time()
             ch.set_current(run_current, hold_current, print_time)
             prev_cur, prev_hold_cur, req_hold_cur, max_cur = ch.get_current()
@@ -194,18 +209,23 @@ class TMCCommandHelperTrigorilla:
         if prev_hold_cur is None:
             gcmd.respond_info("Run Current: %0.2fA" % (prev_cur,))
         else:
-            gcmd.respond_info("Run Current: %0.2fA Hold Current: %0.2fA"
-                              % (prev_cur, prev_hold_cur))
+            gcmd.respond_info(
+                "Run Current: %0.2fA Hold Current: %0.2fA"
+                % (prev_cur, prev_hold_cur)
+            )
+
     def _handle_mcu_identify(self):
         # Lookup stepper object
         force_move = self.printer.lookup_object("force_move")
         self.stepper = force_move.lookup_stepper(self.stepper_name)
+
     def _handle_connect(self):
         # Send init
         try:
             self._init_registers()
         except self.printer.command_error as e:
             logging.info("TMC %s failed to init: %s", self.name, str(e))
+
 
 # Helper code for communicating via TMC uart
 class MCU_TMC_uart_trigorilla:
@@ -215,28 +235,36 @@ class MCU_TMC_uart_trigorilla:
         self.name_to_reg = name_to_reg
         self.fields = fields
         self.ifcnt = None
-        self.instance_id, self.addr, self.mcu_uart = \
+        self.instance_id, self.addr, self.mcu_uart = (
             tmc_uart.lookup_tmc_uart_bitbang(config, max_addr)
+        )
         self.mutex = self.mcu_uart.mutex
         self.tmc_frequency = tmc_frequency
+
     def get_fields(self):
         return self.fields
+
     def _do_get_register(self, reg_name):
         raise self.printer.command_error(
-            "Unable to read tmc uart '%s' register %s" % (self.name, reg_name))
+            "Unable to read tmc uart '%s' register %s" % (self.name, reg_name)
+        )
+
     def get_register(self, reg_name):
         with self.mutex:
             return self._do_get_register(reg_name)
+
     def set_register(self, reg_name, val, print_time=None):
         reg = self.name_to_reg[reg_name]
-        if self.printer.get_start_args().get('debugoutput') is not None:
+        if self.printer.get_start_args().get("debugoutput") is not None:
             return
         with self.mutex:
             # We can't check the IFCNT register so just write the value multiple
             # times in hopes this reduces errors
             for retry in range(2):
-                self.mcu_uart.reg_write(self.instance_id, self.addr, reg, val,
-                                        print_time)
+                self.mcu_uart.reg_write(
+                    self.instance_id, self.addr, reg, val, print_time
+                )
+
     def get_tmc_frequency(self):
         return self.tmc_frequency
 
@@ -245,6 +273,7 @@ class MCU_TMC_uart_trigorilla:
 # TMCTRIGORILLA printer object
 ######################################################################
 
+
 class TMCTRIGORILLA:
     def __init__(self, config):
         # Check microstep coherency
@@ -252,31 +281,36 @@ class TMCTRIGORILLA:
         if not config.has_section(x_name):
             raise config.error(
                 "Could not find config section '%s' for tmctrigorilla"
-                 % (x_name))
+                % (x_name)
+            )
         if not config.has_section("extruder"):
             raise config.error(
-                "Could not find config section 'extruder' for tmctrigorilla")
+                "Could not find config section 'extruder' for tmctrigorilla"
+            )
         x_config = config.getsection(x_name)
         extruder_config = config.getsection("extruder")
-        x_microsteps = x_config.get('microsteps')
-        extruder_microsteps = extruder_config.get('microsteps')
+        x_microsteps = x_config.get("microsteps")
+        extruder_microsteps = extruder_config.get("microsteps")
         if x_microsteps != extruder_microsteps:
             raise config.error(
                 "%s and extruder microsteps must be the same for tmctrigorilla"
-                 % (x_name))
+                % (x_name)
+            )
         # Setup mcu communication
         self.fields = tmc.FieldHelper(Fields)
-        self.mcu_tmc = MCU_TMC_uart_trigorilla(config,
-            Registers, self.fields, 3, TMC_FREQUENCY)
+        self.mcu_tmc = MCU_TMC_uart_trigorilla(
+            config, Registers, self.fields, 3, TMC_FREQUENCY
+        )
         # Setup fields for UART
         self.fields.set_field("pdn_disable", True)
-        self.fields.set_field("senddelay", 2) # Avoid tx errors on shared uart
+        self.fields.set_field("senddelay", 2)  # Avoid tx errors on shared uart
         # Allow virtual pins to be created
         tmc.TMCVirtualPinHelper(config, self.mcu_tmc)
         # Register commands
         current_helper = tmc2130.TMC2130CurrentHelper(config, self.mcu_tmc)
-        cmdhelper = TMCCommandHelperTrigorilla(config, self.mcu_tmc,
-            current_helper)
+        cmdhelper = TMCCommandHelperTrigorilla(
+            config, self.mcu_tmc, current_helper
+        )
         # Setup basic register values
         self.fields.set_field("mstep_reg_select", True)
         tmc.TMCStealthchopHelper(config, self.mcu_tmc, TMC_FREQUENCY)
@@ -304,6 +338,7 @@ class TMCTRIGORILLA:
         set_config_field(config, "tpowerdown", 20)
         # SGTHRS
         set_config_field(config, "sgthrs", 0)
+
 
 def load_config_prefix(config):
     return TMCTRIGORILLA(config)
