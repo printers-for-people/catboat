@@ -101,6 +101,7 @@ slow_velocity:   20 # Slowest velocity for PA test segment (mm/s)
 medium_velocity: 50 # Medium velocity for PA test segment (mm/s)
 fast_velocity:  150 # End velocity for PA test segment (mm/s)
 filament_diameter: 1.75
+fan_speed: 0.5 # Fan speed applied after the brim is printed
 
 [delayed_gcode start_pa_test]
 gcode:
@@ -156,6 +157,7 @@ variable_pa_value: 0             # Used for further tuning of pa value. If value
 variable_pa_range: 0.03          # Only use if pa_value is set to heigher than 0. Used to set the +/- area around pa_value that should be tested
 variable_flow_rate: -1
 variable_testparam: 0            # 0 = advance, 1 = offset, 2 = time_offset
+variable_fan_speed: 0.5
 variable_rawparams: ''
 gcode:
     # Fail early if the required parameters are not provided
@@ -171,6 +173,7 @@ gcode:
     SET_GCODE_VARIABLE MACRO=RUN_PA_TEST VARIABLE=pa_range VALUE={params.PA_RANGE|default(0.01)}
     SET_GCODE_VARIABLE MACRO=RUN_PA_TEST VARIABLE=flow_rate VALUE={params.FLOW_RATE|default(-1)}
     SET_GCODE_VARIABLE MACRO=RUN_PA_TEST VARIABLE=testparam VALUE={params.TESTPARAM|default(0)}
+    SET_GCODE_VARIABLE MACRO=RUN_PA_TEST VARIABLE=fan_speed VALUE={params.FAN_SPEED|default(0.5)}
     SET_GCODE_VARIABLE MACRO=RUN_PA_TEST VARIABLE=rawparams VALUE="'{rawparams}'"
     SAVE_GCODE_STATE NAME=PA_TEST_STATE
     UPDATE_DELAYED_GCODE ID=start_pa_test DURATION=0.01
@@ -299,10 +302,10 @@ Viewed with top lighting, it's easy to see how much less of a bulge there is on 
 
 The sidelit X face shows a much flatter surface around the slots in the nonlinear test cube, while the linear test cubes show shadowed areas to the right of the slots.
 
-When toplit, the 0.4 and 0.3 linear PA show a large bulge slightly late after each slot that casts a shadow below.
-The 0.25 linear PA shows a small indentation after the top of each slot possibly from the transition from a very slow bridge speed to wall speed.
+When toplit, the 0.04 and 0.03 linear PA show a large bulge slightly late after each slot that casts a shadow below.
+The 0.025 linear PA shows a small indentation after the top of each slot possibly from the transition from a very slow bridge speed to wall speed.
 Nonlinear PA exhibits similar effects but to a much smaller extent.
 
-The top view illustrates that 0.30 is already too much linear PA to maintain full extrusion around corners.
-0.40 linear has large gaps between the perimeter lines, and it's starting to have voids at the ends of solid infill lines.
-Both nonlinear and 0.25 linear fully extrude around corners.
+The top view illustrates that 0.03 is already too much linear PA to maintain full extrusion around corners.
+0.04 linear has large gaps between the perimeter lines, and it's starting to have voids at the ends of solid infill lines.
+Both nonlinear and 0.025 linear fully extrude around corners.

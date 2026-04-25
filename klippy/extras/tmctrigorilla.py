@@ -4,7 +4,7 @@
 # Copyright (C) 2023  Jookia <contact@jookia.org>
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
-from . import tmc2208, tmc2209, tmc2130, tmc, tmc_uart
+from . import tmc, tmc2130, tmc2208, tmc2209, tmc_uart
 
 # The Anycubic Trigorilla v1.0.4 board has a hardware bug: It assigns both
 # the TMC2208 extruder controller and TMC2209 X stepper controller to the
@@ -85,7 +85,8 @@ class TMCTRIGORILLA:
         self.get_status = cmdhelper.get_status
         # Setup basic register values
         self.fields.set_field("mstep_reg_select", True)
-        tmc.TMCStealthchopHelper(config, self.mcu_tmc, TMC_FREQUENCY)
+        tmc.TMCStealthchopHelper(config, self.mcu_tmc)
+        tmc.TMCVcoolthrsHelper(config, self.mcu_tmc)
         # Allow other registers to be set from the config
         set_config_field = self.fields.set_config_field
         # GCONF
@@ -95,6 +96,12 @@ class TMCTRIGORILLA:
         set_config_field(config, "hstrt", 5)
         set_config_field(config, "hend", 0)
         set_config_field(config, "tbl", 2)
+        # COOLCONF
+        set_config_field(config, "semin", 0)
+        set_config_field(config, "seup", 0)
+        set_config_field(config, "semax", 0)
+        set_config_field(config, "sedn", 0)
+        set_config_field(config, "seimin", 0)
         # IHOLDIRUN
         set_config_field(config, "iholddelay", 8)
         # PWMCONF
