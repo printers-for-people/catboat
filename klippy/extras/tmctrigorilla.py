@@ -4,7 +4,7 @@
 # Copyright (C) 2023  Jookia <contact@jookia.org>
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
-from . import tmc2208, tmc2209, tmc2130, tmc, tmc_uart
+from . import tmc, tmc2130, tmc2208, tmc2209, tmc_uart
 
 # The Anycubic Trigorilla v1.0.4 board has a hardware bug: It assigns both
 # the TMC2208 extruder controller and TMC2209 X stepper controller to the
